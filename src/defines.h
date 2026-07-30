@@ -5,6 +5,10 @@
 
 #define WSC_MAX_HEAP_SIZE 1024
 
+#define WSC_S_CHAR '\x20'
+#define WSC_T_CHAR '\x09'
+#define WSC_L_CHAR '\x0A'
+
 #define WSM_STACK_STRUCT(type) \
     struct { type* values; size_t index, capacity; }
 
