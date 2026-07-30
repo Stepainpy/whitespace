@@ -3,6 +3,8 @@
 
 #include <whitespace/whitespace.h>
 
+/* Constants */
+
 #define WSC_MAX_HEAP_SIZE 1024
 
 #define WSC_S_CHAR '\x20'
@@ -12,8 +14,8 @@
 #define WSM_STACK_STRUCT(type) \
     struct { type* values; size_t index, capacity; }
 
-/* Instructions description
- * Indicator (-o, +p, r) mean:
+/* Instructions
+ * indicator (-o, +p, r) mean:
  *   -o is how many pops from stack
  *   +p is how many pushes onto stack
  *    r is how many required in stack
@@ -57,6 +59,8 @@ typedef enum {
     WSI_SPACE, WSI_TAB, WSI_LF
 } wse_instr_t;
 
+/* Definition of state */
+
 typedef int ws_int_t;
 typedef unsigned char ws_instr_t;
 
@@ -68,8 +72,11 @@ struct ws_state_t {
     size_t ip, count;
 
     ws_value_stack_t stack;
-    ws_call_stack_t calls;
-    ws_int_t* heap;
+    ws_call_stack_t  calls;
+    ws_int_t*        heap ;
+
+    ws_alloc_t alloc;
+    void*      udata;
 };
 
 #endif /* WS_DEFINES_H */
