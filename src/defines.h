@@ -11,9 +11,6 @@
 #define WSC_T_CHAR '\x09'
 #define WSC_L_CHAR '\x0A'
 
-#define WSM_STACK_STRUCT(type) \
-    struct { type* values; size_t index, capacity; }
-
 /* Instructions
  * indicator (-o, +p, r) mean:
  *   -o is how many pops from stack
@@ -54,15 +51,15 @@ typedef enum {
     /* (-1, +0, 1) */ WSI_JNEG /* <label> */, /* [Tab][Tab]     */
     /* (-0, +0, 0) */ WSI_RET               , /* [Tab][LF]      */
     /* (-0, +0, 0) */ WSI_EXIT              , /* [LF][LF]       */
-
-    /* Aliases for [Space], [Tab] and [LF] */
-    WSI_SPACE, WSI_TAB, WSI_LF
 } wse_instr_t;
 
 /* Definition of state */
 
 typedef int ws_int_t;
 typedef unsigned char ws_instr_t;
+
+#define WSM_STACK_STRUCT(type) \
+    struct { type* values; size_t index, capacity; }
 
 typedef WSM_STACK_STRUCT(ws_int_t) ws_value_stack_t;
 typedef WSM_STACK_STRUCT(  size_t) ws_call_stack_t;
