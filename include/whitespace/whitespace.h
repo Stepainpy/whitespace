@@ -21,9 +21,17 @@ typedef size_t (ws_write_t)(const void* src, size_t size, size_t count, void* us
 
 typedef enum {
     WSE_OK = 0,
+
     WSE_INVAL_ARG,
     WSE_NO_MEMORY,
-    WSE_INVAL_INSTR
+    WSE_INVAL_INSTR,
+    WSE_INCOMPL_INSTR,
+
+    WSE_INVAL_SIGN,
+    WSE_INT_OVERFLOW,
+    WSE_INCOMPL_INT,
+
+    WSE_NOT_IMPL
 } ws_error_t;
 
 const char* ws_strerror(ws_error_t error);

@@ -55,8 +55,9 @@ typedef enum {
 
 /* Definition of state */
 
-typedef int ws_int_t;
-typedef unsigned char ws_instr_t;
+typedef int ws_int_t; /* you can change */
+
+typedef unsigned char ws_instr_t; /* must be byte */
 
 #define WSM_STACK_STRUCT(type) \
     struct { type* values; size_t index, capacity; }
