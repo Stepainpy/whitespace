@@ -36,33 +36,39 @@ retry:
     }
 }
 
-static ws_error_t wsi_instr_reserve(ws_state_t* s, size_t need) {
-    size_t newcap; void* newptr;
-    if (s->ip + need <= s->count) return WSE_OK;
+typedef struct {
+    wsi_instr_t* instrs;
+    size_t count, capacity;
+    void* ud; ws_alloc_t fn;
+} wsi_array_t;
 
-    newcap = s->count;
-    while (s->ip + need > newcap)
+static ws_error_t wsi_instr_reserve(wsi_array_t* a, size_t need) {
+    size_t newcap; void* newptr;
+    if (a->count + need <= a->capacity) return WSE_OK;
+
+    newcap = a->capacity;
+    while (a->count + need > newcap)
         newcap = (newcap * 207 + 127) / 128;
 
-    newptr = s->alloc(s->instrs, newcap, s->udata);
+    newptr = a->fn(a->instrs, newcap, a->ud);
     if (!newptr) return WSE_NO_MEMORY;
 
-    s->instrs = newptr;
-    s->count  = newcap;
+    a->instrs   = newptr;
+    a->capacity = newcap;
     return WSE_OK;
 }
 
-static ws_error_t wsi_instr_push(ws_state_t* s, wse_instr_t instr) {
-    if (wsi_instr_reserve(s, 1)) return WSE_NO_MEMORY;
-    s->instrs[s->ip++] = instr;
+static ws_error_t wsi_instr_push(wsi_array_t* a, wse_instr_t instr) {
+    if (wsi_instr_reserve(a, 1)) return WSE_NO_MEMORY;
+    a->instrs[a->count++] = instr;
     return WSE_OK;
 }
 
-static ws_error_t wsi_instr_push_int(ws_state_t* s, ws_int_t integer) {
-    size_t i; if (wsi_instr_reserve(s, sizeof integer))
+static ws_error_t wsi_instr_push_int(wsi_array_t* a, ws_int_t integer) {
+    size_t i; if (wsi_instr_reserve(a, sizeof integer))
         return WSE_NO_MEMORY;
     for (i = 0; i < sizeof integer; i++, integer >>= 8)
-        s->instrs[s->ip++] = integer & 0xFF;
+        a->instrs[a->count++] = integer & 0xFF;
     return WSE_OK;
 }
 
@@ -89,28 +95,28 @@ static ws_error_t wsi_parse_integer(wsi_read_buffer_t* rb, ws_int_t* out) {
     return WSE_OK;
 }
 
-static ws_error_t wsi_parse_stk_manip(ws_state_t* s, wsi_read_buffer_t* rb) {
+static ws_error_t wsi_parse_stk_manip(wsi_array_t* a, wsi_read_buffer_t* rb) {
     ws_int_t arg; ws_error_t ec;
 
     switch (wsi_rb_get(rb)) {
         case WSA_SPACE:
             if ((ec = wsi_parse_integer(rb, &arg))) return ec;
 
-            if ((ec = wsi_instr_push    (s, WSI_PUSH))) return ec;
-            if ((ec = wsi_instr_push_int(s,      arg))) return ec;
+            if ((ec = wsi_instr_push    (a, WSI_PUSH))) return ec;
+            if ((ec = wsi_instr_push_int(a,      arg))) return ec;
 
             break;
 
         case WSA_LF:
             switch (wsi_rb_get(rb)) {
                 case WSA_SPACE:
-                    if ((ec = wsi_instr_push(s, WSI_DUP))) return ec;
+                    if ((ec = wsi_instr_push(a, WSI_DUP))) return ec;
                     break;
                 case WSA_TAB:
-                    if ((ec = wsi_instr_push(s, WSI_SWAP))) return ec;
+                    if ((ec = wsi_instr_push(a, WSI_SWAP))) return ec;
                     break;
                 case WSA_LF:
-                    if ((ec = wsi_instr_push(s, WSI_DROP))) return ec;
+                    if ((ec = wsi_instr_push(a, WSI_DROP))) return ec;
                     break;
 
                 case WSA_EOF: return WSE_INCOMPL_INSTR;
@@ -121,15 +127,15 @@ static ws_error_t wsi_parse_stk_manip(ws_state_t* s, wsi_read_buffer_t* rb) {
                 case WSA_SPACE:
                     if ((ec = wsi_parse_integer(rb, &arg))) return ec;
 
-                    if ((ec = wsi_instr_push    (s, WSI_COPY))) return ec;
-                    if ((ec = wsi_instr_push_int(s,      arg))) return ec;
+                    if ((ec = wsi_instr_push    (a, WSI_COPY))) return ec;
+                    if ((ec = wsi_instr_push_int(a,      arg))) return ec;
 
                     break;
                 case WSA_LF:
                     if ((ec = wsi_parse_integer(rb, &arg))) return ec;
 
-                    if ((ec = wsi_instr_push    (s, WSI_SLIDE))) return ec;
-                    if ((ec = wsi_instr_push_int(s,       arg))) return ec;
+                    if ((ec = wsi_instr_push    (a, WSI_SLIDE))) return ec;
+                    if ((ec = wsi_instr_push_int(a,       arg))) return ec;
 
                     break;
 
@@ -143,56 +149,57 @@ static ws_error_t wsi_parse_stk_manip(ws_state_t* s, wsi_read_buffer_t* rb) {
     return WSE_OK;
 }
 
-static ws_error_t wsi_parse_arith(ws_state_t* s, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)s, (void)rb; }
-static ws_error_t wsi_parse_heap_acs(ws_state_t* s, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)s, (void)rb; }
-static ws_error_t wsi_parse_io(ws_state_t* s, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)s, (void)rb; }
-static ws_error_t wsi_parse_flow_ctrl(ws_state_t* s, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)s, (void)rb; }
+static ws_error_t wsi_parse_arith    (wsi_array_t* a, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)a, (void)rb; }
+static ws_error_t wsi_parse_heap_acs (wsi_array_t* a, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)a, (void)rb; }
+static ws_error_t wsi_parse_io       (wsi_array_t* a, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)a, (void)rb; }
+static ws_error_t wsi_parse_flow_ctrl(wsi_array_t* a, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)a, (void)rb; }
 
 ws_error_t ws_compile(
-    ws_state_t** sptr,
+    ws_code_t** cptr,
     void* src, ws_read_t rdr,
     ws_alloc_t alloc, void* udata
 ) {
-    wsi_read_buffer_t rb[1] = {0};
-    ws_state_t* state;
+    wsi_read_buffer_t rdbuf[1] = {0};
+    wsi_array_t arr[1] = {0};
+    ws_code_t* code;
     ws_error_t ec;
 
-    if (!sptr || !rdr || !alloc) return WSE_INVAL_ARG;
-    *sptr = NULL;
-    rb->func = rdr;
-    rb->ud   = src;
+    if (!cptr || !rdr || !alloc) return WSE_INVAL_ARG;
+    *cptr = NULL;
+    rdbuf->func = rdr;
+    rdbuf->ud   = src;
 
-    state = alloc(NULL, sizeof *state, udata);
-    if (!state) return WSE_NO_MEMORY;
-    memset(state, 0, sizeof *state);
-    state->alloc = alloc;
-    state->udata = udata;
+    code = alloc(NULL, sizeof *code, udata);
+    if (!code) return WSE_NO_MEMORY;
+    memset(code, 0, sizeof *code);
+    code->alloc = arr->fn = alloc;
+    code->udata = arr->ud = udata;
 
-    state->instrs = alloc(NULL, WSC_INIT_INSTR_CAP, udata);
-    if (!state->instrs) WSM_THROW(WSE_NO_MEMORY);
-    state->count = WSC_INIT_INSTR_CAP;
+    arr->instrs = alloc(NULL,
+        (arr->capacity = WSC_INIT_INSTR_CAP), udata);
+    if (!arr->instrs) WSM_THROW(WSE_NO_MEMORY);
 
     while (1) {
-        switch (wsi_rb_get(rb)) {
+        switch (wsi_rb_get(rdbuf)) {
             case WSA_SPACE:
-                ec = wsi_parse_stk_manip(state, rb);
+                ec = wsi_parse_stk_manip(arr, rdbuf);
                 if (ec) goto error;
                 break;
 
             case WSA_TAB:
-                switch (wsi_rb_get(rb)) {
+                switch (wsi_rb_get(rdbuf)) {
                     case WSA_SPACE:
-                        ec = wsi_parse_arith(state, rb);
+                        ec = wsi_parse_arith(arr, rdbuf);
                         if (ec) goto error;
                         break;
 
                     case WSA_TAB:
-                        ec = wsi_parse_heap_acs(state, rb);
+                        ec = wsi_parse_heap_acs(arr, rdbuf);
                         if (ec) goto error;
                         break;
 
                     case WSA_LF:
-                        ec = wsi_parse_io(state, rb);
+                        ec = wsi_parse_io(arr, rdbuf);
                         if (ec) goto error;
                         break;
 
@@ -200,7 +207,7 @@ ws_error_t ws_compile(
                 } break;
 
             case WSA_LF:
-                ec = wsi_parse_flow_ctrl(state, rb);
+                ec = wsi_parse_flow_ctrl(arr, rdbuf);
                 if (ec) goto error;
                 break;
 
@@ -209,13 +216,13 @@ ws_error_t ws_compile(
     }
 loop_exit:
 
-    state->count = state->ip;
-    state->ip = 0;
+    code->instrs = arr->instrs;
+    code->count  = arr->count ;
 
-    *sptr = state;
+    *cptr = code;
     return WSE_OK;
 error:
-    alloc(state->instrs, 0, udata);
-    alloc(state, 0, udata);
+    alloc(arr->instrs, 0, udata);
+    alloc(code, 0, udata);
     return ec;
 }

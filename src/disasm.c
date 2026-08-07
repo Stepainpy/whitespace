@@ -1,6 +1,6 @@
 #include "defines.h"
 
-static ws_int_t wsi_read_int(ws_instr_t* src) {
+static ws_int_t wsi_read_int(wsi_instr_t* src) {
     ws_int_t out = 0; size_t i;
     for (i = 0; i < sizeof out; i++)
         out |= (ws_int_t)src[i] << (i * 8);
@@ -23,15 +23,15 @@ static size_t wsi_conv_int(ws_int_t integer, char* out) {
     return sz;
 }
 
-ws_error_t ws_disasm(ws_state_t* s, void* output, ws_write_t wtr) {
+ws_error_t ws_disasm(ws_code_t* c, void* output, ws_write_t wtr) {
     char intbuf[24] = {0}; size_t i, sz;
-    if (!s || !wtr) return WSE_INVAL_ARG;
+    if (!c || !wtr) return WSE_INVAL_ARG;
 
-    for (i = 0; i < s->count; i++) {
-        switch (s->instrs[i]) {
+    for (i = 0; i < c->count; i++) {
+        switch (c->instrs[i]) {
             case WSI_PUSH:
                 if (!wtr("push ", 5, 1, output)) return WSE_FAIL_WRITE;
-                sz = wsi_conv_int(wsi_read_int(s->instrs + i + 1), intbuf);
+                sz = wsi_conv_int(wsi_read_int(c->instrs + i + 1), intbuf);
                 if (!wtr(intbuf, sz, 1, output)) return WSE_FAIL_WRITE;
                 i += sizeof(ws_int_t);
                 break;
@@ -48,13 +48,13 @@ ws_error_t ws_disasm(ws_state_t* s, void* output, ws_write_t wtr) {
 
             case WSI_COPY:
                 if (!wtr("copy ", 5, 1, output)) return WSE_FAIL_WRITE;
-                sz = wsi_conv_int(wsi_read_int(s->instrs + i + 1), intbuf);
+                sz = wsi_conv_int(wsi_read_int(c->instrs + i + 1), intbuf);
                 if (!wtr(intbuf, sz, 1, output)) return WSE_FAIL_WRITE;
                 i += sizeof(ws_int_t);
                 break;
             case WSI_SLIDE:
                 if (!wtr("slide ", 6, 1, output)) return WSE_FAIL_WRITE;
-                sz = wsi_conv_int(wsi_read_int(s->instrs + i + 1), intbuf);
+                sz = wsi_conv_int(wsi_read_int(c->instrs + i + 1), intbuf);
                 if (!wtr(intbuf, sz, 1, output)) return WSE_FAIL_WRITE;
                 i += sizeof(ws_int_t);
                 break;

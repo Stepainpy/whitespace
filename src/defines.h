@@ -3,13 +3,15 @@
 
 #include <whitespace/whitespace.h>
 
-/* Constants */
+/* Constants and types */
 
 #define WSC_MAX_HEAP_SIZE 1024
 
 #define WSC_S_CHAR '\x20'
 #define WSC_T_CHAR '\x09'
 #define WSC_L_CHAR '\x0A'
+
+typedef int ws_int_t;
 
 /* Instructions
  * indicator (-o, +p, r) mean:
@@ -57,26 +59,11 @@ typedef enum {
 
 /* Definition of state */
 
-typedef int ws_int_t; /* you can change */
+typedef unsigned char wsi_instr_t;
 
-typedef unsigned char ws_instr_t; /* must be byte */
-
-#define WSM_STACK_STRUCT(type) \
-    struct { type* values; size_t index, capacity; }
-
-typedef WSM_STACK_STRUCT(ws_int_t) ws_value_stack_t;
-typedef WSM_STACK_STRUCT(  size_t) ws_call_stack_t;
-
-struct ws_state_t {
-    ws_instr_t* instrs;
-    size_t ip, count;
-
-    ws_value_stack_t stack;
-    ws_call_stack_t  calls;
-    ws_int_t*        heap ;
-
-    ws_alloc_t alloc;
-    void*      udata;
+struct ws_code_t {
+    wsi_instr_t* instrs; size_t count;
+    ws_alloc_t alloc; void* udata;
 };
 
 #endif /* WS_DEFINES_H */

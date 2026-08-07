@@ -9,7 +9,7 @@ extern "C" {
 
 /* Types */
 
-typedef struct ws_state_t ws_state_t;
+typedef struct ws_code_t ws_code_t;
 
 /* Callback signatures */
 
@@ -40,20 +40,20 @@ const char* ws_strerror(ws_error_t error);
 
 /* Compilation and interpretation */
 
-ws_error_t ws_compile(ws_state_t** state,
+ws_error_t ws_compile(ws_code_t** code,
     void* source, ws_read_t reader,
     ws_alloc_t allocator, void* alloc_ud);
 
-ws_error_t ws_execute(ws_state_t* state,
+ws_error_t ws_execute(ws_code_t* code,
     void*  input, ws_read_t  reader,
     void* output, ws_write_t writer);
 
 /* Other functions */
 
-ws_error_t ws_disasm(ws_state_t* state,
+ws_error_t ws_disasm(ws_code_t* code,
     void* output, ws_write_t writer);
 
-void ws_destroy(ws_state_t* state);
+void ws_destroy(ws_code_t* code);
 
 #ifdef __cplusplus
 }

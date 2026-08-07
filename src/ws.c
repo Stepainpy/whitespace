@@ -10,7 +10,7 @@ void* ws_alloc(void* ptr, size_t size, void* ud) {
 
 int main(int argc, char* argv[]) {
     ws_error_t ec = WSE_NOT_IMPL;
-    ws_state_t* state = NULL;
+    ws_code_t* code = NULL;
     FILE* source = NULL;
 
     /* Skip program name */
@@ -20,19 +20,19 @@ int main(int argc, char* argv[]) {
     source = fopen(*argv, "r");
     if (!source) goto cleanup;
 
-    ec = ws_compile(&state,
+    ec = ws_compile(&code,
         source, (ws_read_t)fread,
         ws_alloc, NULL);
     if (ec) goto cleanup;
 
-    puts("before disasm");
-    ec = ws_disasm(state,
+    puts("==== BEGIN ====");
+    ec = ws_disasm(code,
         stdout, (ws_write_t)fwrite);
     if (ec) goto cleanup;
-    puts("after disasm");
+    puts("===== END =====");
 
 cleanup:
-    if (state) ws_destroy(state);
+    if (code) ws_destroy(code);
     if (source) fclose(source);
     return ec;
 }
