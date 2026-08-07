@@ -59,6 +59,22 @@ ws_error_t ws_disasm(ws_code_t* c, void* output, ws_write_t wtr) {
                 i += sizeof(ws_int_t);
                 break;
 
+            case WSI_ADD:
+                if (!wtr("add", 3, 1, output)) return WSE_FAIL_WRITE;
+                break;
+            case WSI_SUB:
+                if (!wtr("sub", 3, 1, output)) return WSE_FAIL_WRITE;
+                break;
+            case WSI_MUL:
+                if (!wtr("mul", 3, 1, output)) return WSE_FAIL_WRITE;
+                break;
+            case WSI_DIV:
+                if (!wtr("div", 3, 1, output)) return WSE_FAIL_WRITE;
+                break;
+            case WSI_MOD:
+                if (!wtr("mod", 3, 1, output)) return WSE_FAIL_WRITE;
+                break;
+
             default:
             case WSI_UNKNOWN:
                 if (!wtr("<unknown>", 9, 1, output)) return WSE_FAIL_WRITE;
