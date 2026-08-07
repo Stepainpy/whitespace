@@ -186,8 +186,61 @@ static ws_error_t wsi_parse_arith(wsi_array_t* a, wsi_read_buffer_t* rb) {
     return WSE_OK;
 }
 
-static ws_error_t wsi_parse_heap_acs (wsi_array_t* a, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)a, (void)rb; }
-static ws_error_t wsi_parse_io       (wsi_array_t* a, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)a, (void)rb; }
+static ws_error_t wsi_parse_heap_acs(wsi_array_t* a, wsi_read_buffer_t* rb) {
+    ws_error_t ec;
+
+    switch (wsi_rb_get(rb)) {
+        case WSA_SPACE:
+            if ((ec = wsi_instr_push(a, WSI_STORE))) return ec;
+            break;
+        case WSA_TAB:
+            if ((ec = wsi_instr_push(a, WSI_LOAD))) return ec;
+            break;
+
+        case WSA_LF: return WSE_INVAL_INSTR;
+        case WSA_EOF: return WSE_INCOMPL_INSTR;
+    }
+
+    return WSE_OK;
+}
+
+static ws_error_t wsi_parse_io(wsi_array_t* a, wsi_read_buffer_t* rb) {
+    ws_error_t ec;
+
+    switch (wsi_rb_get(rb)) {
+        case WSA_SPACE:
+            switch (wsi_rb_get(rb)) {
+                case WSA_SPACE:
+                    if ((ec = wsi_instr_push(a, WSI_OUT_CHAR))) return ec;
+                    break;
+                case WSA_TAB:
+                    if ((ec = wsi_instr_push(a, WSI_OUT_INT))) return ec;
+                    break;
+
+                case WSA_LF: return WSE_INVAL_INSTR;
+                case WSA_EOF: return WSE_INCOMPL_INSTR;
+            } break;
+
+        case WSA_TAB:
+            switch (wsi_rb_get(rb)) {
+                case WSA_SPACE:
+                    if ((ec = wsi_instr_push(a, WSI_IN_CHAR))) return ec;
+                    break;
+                case WSA_TAB:
+                    if ((ec = wsi_instr_push(a, WSI_IN_INT))) return ec;
+                    break;
+
+                case WSA_LF: return WSE_INVAL_INSTR;
+                case WSA_EOF: return WSE_INCOMPL_INSTR;
+            } break;
+
+        case WSA_LF: return WSE_INVAL_INSTR;
+        case WSA_EOF: return WSE_INCOMPL_INSTR;
+    }
+
+    return WSE_OK;
+}
+
 static ws_error_t wsi_parse_flow_ctrl(wsi_array_t* a, wsi_read_buffer_t* rb) { return WSE_NOT_IMPL; (void)a, (void)rb; }
 
 ws_error_t ws_compile(

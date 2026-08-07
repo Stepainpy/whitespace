@@ -27,6 +27,7 @@ if(MSVC)
 else()
     # For the future
     # list(APPEND FLAGS -Wno-long-long)
+    list(APPEND FLAGS -Wswitch-enum)
 endif()
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang$")

@@ -75,6 +75,26 @@ ws_error_t ws_disasm(ws_code_t* c, void* output, ws_write_t wtr) {
                 if (!wtr("mod", 3, 1, output)) return WSE_FAIL_WRITE;
                 break;
 
+            case WSI_STORE:
+                if (!wtr("store", 5, 1, output)) return WSE_FAIL_WRITE;
+                break;
+            case WSI_LOAD:
+                if (!wtr("load", 4, 1, output)) return WSE_FAIL_WRITE;
+                break;
+
+            case WSI_OUT_CHAR:
+                if (!wtr("out-char", 8, 1, output)) return WSE_FAIL_WRITE;
+                break;
+            case WSI_OUT_INT:
+                if (!wtr("out-int", 7, 1, output)) return WSE_FAIL_WRITE;
+                break;
+            case WSI_IN_CHAR:
+                if (!wtr("in-char", 7, 1, output)) return WSE_FAIL_WRITE;
+                break;
+            case WSI_IN_INT:
+                if (!wtr("in-int", 6, 1, output)) return WSE_FAIL_WRITE;
+                break;
+
             default:
             case WSI_UNKNOWN:
                 if (!wtr("<unknown>", 9, 1, output)) return WSE_FAIL_WRITE;
