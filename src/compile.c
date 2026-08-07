@@ -44,25 +44,25 @@ static ws_error_t wsi_instr_reserve(ws_state_t* s, size_t need) {
     while (s->ip + need > newcap)
         newcap = (newcap * 207 + 127) / 128;
 
-    newptr = s->alloc(s->instr, newcap, s->udata);
+    newptr = s->alloc(s->instrs, newcap, s->udata);
     if (!newptr) return WSE_NO_MEMORY;
 
-    s->instr = newptr;
-    s->count = newcap;
+    s->instrs = newptr;
+    s->count  = newcap;
     return WSE_OK;
 }
 
 static ws_error_t wsi_instr_push(ws_state_t* s, wse_instr_t instr) {
-    if (wsi_instr_reverse(s, 1)) return WSE_NO_MEMORY;
-    s->instr[s->ip++] = instr;
+    if (wsi_instr_reserve(s, 1)) return WSE_NO_MEMORY;
+    s->instrs[s->ip++] = instr;
     return WSE_OK;
 }
 
 static ws_error_t wsi_instr_push_int(ws_state_t* s, ws_int_t integer) {
-    size_t i; if (wsi_instr_reverse(s, sizeof integer))
+    size_t i; if (wsi_instr_reserve(s, sizeof integer))
         return WSE_NO_MEMORY;
     for (i = 0; i < sizeof integer; i++, integer >>= 8)
-        s->instr[s->ip++] = integer & 0xFF;
+        s->instrs[s->ip++] = integer & 0xFF;
     return WSE_OK;
 }
 
@@ -168,8 +168,9 @@ ws_error_t ws_compile(
     state->alloc = alloc;
     state->udata = udata;
 
-    state->instr = alloc(NULL, WSC_INIT_INSTR_CAP, udata);
-    if (!state->instr) WSM_THROW(WSE_NO_MEMORY);
+    state->instrs = alloc(NULL, WSC_INIT_INSTR_CAP, udata);
+    if (!state->instrs) WSM_THROW(WSE_NO_MEMORY);
+    state->count = WSC_INIT_INSTR_CAP;
 
     while (1) {
         switch (wsi_rb_get(rb)) {
@@ -208,9 +209,13 @@ ws_error_t ws_compile(
     }
 loop_exit:
 
+    state->count = state->ip;
+    state->ip = 0;
+
+    *sptr = state;
     return WSE_OK;
 error:
-    alloc(state->instr, 0, udata);
+    alloc(state->instrs, 0, udata);
     alloc(state, 0, udata);
     return ec;
 }

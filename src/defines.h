@@ -51,6 +51,8 @@ typedef enum {
     /* (-1, +0, 1) */ WSI_JNEG /* <label> */, /* [Tab][Tab]     */
     /* (-0, +0, 0) */ WSI_RET               , /* [Tab][LF]      */
     /* (-0, +0, 0) */ WSI_EXIT              , /* [LF][LF]       */
+
+    WSI_UNKNOWN /* Placeholder for last comma */
 } wse_instr_t;
 
 /* Definition of state */
