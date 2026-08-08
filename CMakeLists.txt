@@ -3,6 +3,7 @@ project(whitespace LANGUAGES C)
 
 set(WS_LIB whitespace)
 set(WS_EXE ws)
+set(WS_TRL wst)
 
 ## External settings
 
@@ -98,6 +99,32 @@ target_include_directories(${WS_EXE}
 
 target_link_libraries(${WS_EXE} PRIVATE ${WS_LIB})
 
+## Create translator
+
+add_executable(${WS_TRL})
+
+set(TRL_SRCS src/wst.c)
+
+target_sources(${WS_TRL} PRIVATE ${TRL_SRCS})
+
+set_target_properties(whitespace PROPERTIES
+    C_STANDARD          90
+    C_STANDARD_REQUIRED ON
+    C_EXTENSIONS        OFF
+    C_VISIBILITY_PRESET hidden
+
+    VISIBILITY_INLINES_HIDDEN ON
+)
+
+target_compile_options(${WS_TRL} PRIVATE ${FLAGS})
+target_include_directories(${WS_TRL}
+    PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
 ## Set output directories
 
 if(PROJECT_IS_TOP_LEVEL)
@@ -107,6 +134,9 @@ if(PROJECT_IS_TOP_LEVEL)
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin"
     )
     set_target_properties(${WS_EXE} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin"
+    )
+    set_target_properties(${WS_TRL} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin"
     )
 endif()
