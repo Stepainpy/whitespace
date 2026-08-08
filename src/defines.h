@@ -6,10 +6,18 @@
 /* Constants and types */
 
 #define WSC_MAX_HEAP_SIZE 1024
+#define WSC_MAX_LABEL_SIZE 64
 
 #define WSC_S_CHAR '\x20'
 #define WSC_T_CHAR '\x09'
 #define WSC_L_CHAR '\x0A'
+
+typedef enum {
+    WSA_EOF = 0,
+    WSA_SPACE,
+    WSA_TAB,
+    WSA_LF
+} wsa_char_t;
 
 typedef int ws_int_t;
 
@@ -48,9 +56,9 @@ typedef enum {
     /* [LF] - Flow control */
     /* (-0, +0, 0) */ WSI_MARK /* <label> */, /* [Space][Space] */
     /* (-0, +0, 0) */ WSI_CALL /* <label> */, /* [Space][Tab]   */
-    /* (-0, +0, 0) */ WSI_JUMP /* <label> */, /* [Space][LF]    */
-    /* (-1, +0, 1) */ WSI_JZER /* <label> */, /* [Tab][Space]   */
-    /* (-1, +0, 1) */ WSI_JNEG /* <label> */, /* [Tab][Tab]     */
+    /* (-0, +0, 0) */ WSI_GOTO /* <label> */, /* [Space][LF]    */
+    /* (-1, +0, 1) */ WSI_IFZR /* <label> */, /* [Tab][Space]   */
+    /* (-1, +0, 1) */ WSI_IFNG /* <label> */, /* [Tab][Tab]     */
     /* (-0, +0, 0) */ WSI_RET               , /* [Tab][LF]      */
     /* (-0, +0, 0) */ WSI_EXIT              , /* [LF][LF]       */
 
