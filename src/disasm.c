@@ -26,7 +26,10 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
     if (!c || !wtr) return WSE_INVAL_ARG;
 
     for (i = 0; i < c->count; i++) {
-        switch (c->instrs[i]) {
+        wse_instr_t instr = c->instrs[i];
+        if (instr != WSI_MARK)
+            if (!wtr("    ", 4, 1, out)) return WSE_FAIL_WRITE;
+        switch (instr) {
             case WSI_PUSH:
                 if (!wtr("push ", 5, 1, out)) return WSE_FAIL_WRITE;
                 memcpy(&integer, c->instrs + i + 1, sizeof integer);
@@ -97,7 +100,6 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
                 break;
 
             case WSI_MARK:
-                if (!wtr("makr ", 5, 1, out)) return WSE_FAIL_WRITE;
                 ii = i + 1; i += WSL_BYTE;
                 goto write_label;
             case WSI_CALL:
@@ -139,7 +141,9 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
                 if (!wtr("<unknown>", 9, 1, out)) return WSE_FAIL_WRITE;
                 break;
         }
-        wtr("\n", 1, 1, out);
+        if (instr == WSI_MARK)
+            if (!wtr(":", 1, 1, out)) return WSE_FAIL_WRITE;
+        if (!wtr("\n", 1, 1, out)) return WSE_FAIL_WRITE;
     }
 
     return WSE_OK;
