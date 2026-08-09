@@ -21,13 +21,11 @@ int main(int argc, char* argv[]) {
     if (!source) goto cleanup;
 
     ec = ws_compile(&code,
-        source, (ws_read_t)fread,
-        ws_alloc, NULL);
+        source, (ws_rdfn_t)fread, ws_alloc, NULL);
     if (ec) goto cleanup;
 
     puts("==== BEGIN ====");
-    ec = ws_disasm(code,
-        stdout, (ws_write_t)fwrite);
+    ec = ws_disasm(code, stdout, (ws_wrfn_t)fwrite);
     if (ec) goto cleanup;
     puts("===== END =====");
 

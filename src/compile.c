@@ -9,7 +9,7 @@
 typedef struct {
     char window[WSC_READ_BUFFER_SIZE];
     size_t index, count;
-    ws_read_t func; void* ud;
+    ws_rdfn_t func; void* ud;
 } wsi_read_buffer_t;
 
 static wsa_char_t wsi_rb_get(wsi_read_buffer_t* rdbuf) {
@@ -441,8 +441,7 @@ static ws_error_t wsi_parse_flow_ctrl(
     do { ec = err_code; goto error; } while (0)
 
 ws_error_t ws_compile(
-    ws_code_t** cptr,
-    void* src, ws_read_t rdr,
+    ws_code_t** cptr, void* src, ws_rdfn_t rdr,
     ws_alloc_t alloc, void* udata
 ) {
     wsi_read_buffer_t rdbuf[1] = {0};
@@ -454,10 +453,10 @@ ws_error_t ws_compile(
     size_t i;
 
     if (!cptr || !rdr || !alloc) return WSE_INVAL_ARG;
-    *cptr = NULL;
     rdbuf->func = rdr;
     rdbuf->ud   = src;
 
+    *cptr = NULL;
     code = alloc(NULL, sizeof *code, udata);
     if (!code) return WSE_NO_MEMORY;
     memset(code, 0, sizeof *code);
@@ -528,10 +527,12 @@ loop_exit:
         }
     }
 
-    code->instrs = arr->instrs;
-    code->count  = arr->count ;
+    code->instrs = alloc(arr->instrs, arr->count, udata);
+    if (arr->count && !code->instrs) WSM_THROW(WSE_NO_SHRINK);
+    code->count = arr->count;
 
     *cptr = code;
+    alloc(lst->labels, 0, udata);
     return WSE_OK;
 error:
     alloc(lst->labels, 0, udata);
