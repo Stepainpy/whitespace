@@ -1,0 +1,15 @@
+S S S/T/L    ; push 1
+S S S/S/L    ; push 0
+
+L SS S/L     ; mark 'loop'
+
+S LS         ; dup
+TL ST        ; out num
+S S S/TSTS/L ; push 10
+TL SS        ; out char
+
+S TS S/T/L   ; copy 2nd
+TS SS        ; add
+S LT         ; swap
+
+L SL S/L     ; goto 'loop'

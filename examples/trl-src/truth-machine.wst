@@ -1,0 +1,15 @@
+S S S//L ; push 0
+S LS     ; dup
+TL TT    ; in num
+TT T     ; load
+
+L SS S/L ; mark 'loop'
+
+S LS     ; dup
+TL ST    ; out num
+S LS     ; dup
+L TS T/L ; jz 'break'
+L SL S/L ; goto 'loop'
+
+L SS T/L ; mark 'break'
+LLL      ; exit
