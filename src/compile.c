@@ -1,4 +1,5 @@
 #include "defines.h"
+#include "label.h"
 
 #include <string.h>
 
@@ -232,64 +233,12 @@ static ws_error_t wsi_parse_io(wsi_array_t* a, wsi_read_buffer_t* rb) {
     return WSE_OK;
 }
 
-typedef unsigned long wsi_lbl_int_t;
-
-#define WSC_LABEL_INT_BIT (sizeof(wsi_lbl_int_t) * 8)
-#define WSC_LABEL_PARTS ((WSC_MAX_LABEL_SIZE * 2 + WSC_LABEL_INT_BIT - 1) / WSC_LABEL_INT_BIT)
-
-#define WSC_INVAL_PLACE (~(size_t)0)
-
-typedef struct {
-    size_t place;
-    wsi_lbl_int_t parts[WSC_LABEL_PARTS];
-} wsi_label_t;
-
-typedef struct {
-    wsi_label_t* labels;
-    size_t count, capacity;
-    ws_alloc_t fn; void* ud;
-} wsi_label_list_t;
-
-static int wsi_label_equal(const wsi_label_t* lhs, const wsi_label_t* rhs) {
-    size_t i; for (i = 0; i < WSC_LABEL_PARTS; i++)
-        if (lhs->parts[i] != rhs->parts[i]) return 0;
-    return 1;
-}
-
-static int wsi_label_find(const wsi_label_list_t* ll, const wsi_label_t* l) {
-    size_t i; for (i = 0; i < ll->count; i++)
-        if (wsi_label_equal(ll->labels + i, l)) return i;
-    return -1;
-}
-
-static ws_error_t wsi_label_reserve(wsi_label_list_t* ll, size_t need) {
-    size_t newcap; void* newptr;
-    if (ll->count + need <= ll->capacity) return WSE_OK;
-
-    newcap = ll->capacity;
-    while (ll->count + need > newcap)
-        newcap = (newcap * 207 + 127) / 128;
-
-    newptr = ll->fn(ll->labels, sizeof *ll->labels * newcap, ll->ud);
-    if (!newptr) return WSE_NO_MEMORY;
-
-    ll->labels   = newptr;
-    ll->capacity = newcap;
-    return WSE_OK;
-}
-
-static ws_error_t wsi_label_push(wsi_label_list_t* ll, wsi_label_t* label) {
-    if (wsi_label_reserve(ll, 1)) return WSE_NO_MEMORY;
-    memcpy(ll->labels + ll->count++, label, sizeof *label);
-    return WSE_OK;
-}
-
 static ws_error_t wsi_instr_push_label(wsi_array_t* a, wsi_label_t* label) {
-    size_t i; if (wsi_instr_reserve(a, sizeof *label->parts))
+    size_t i; if (wsi_instr_reserve(a, WSL_PARTS_BYTE))
         return WSE_NO_MEMORY;
-    for (i = 0; i < sizeof(wsi_lbl_int_t) * WSC_LABEL_PARTS; i++)
+    for (i = 0; i < WSL_PARTS_BYTE; i++)
         a->instrs[a->count++] = (
-            label->parts[i / sizeof(wsi_lbl_int_t)] >> ((i % sizeof(wsi_lbl_int_t)) * 8)
+            label->parts[i / WSL_PART_BYTE] >> ((i % WSL_PART_BYTE) * 8)
         ) & 0xFF;
     return WSE_OK;
 }
@@ -319,39 +268,32 @@ static ws_error_t wsi_parse_label(wsi_read_buffer_t* rb, wsi_label_t* lbl) {
     /**/ if (ch == WSA_LF ) return WSE_INVAL_LABEL;
     else if (ch == WSA_EOF) return WSE_INCOMPL_LABEL;
 
-    memset(lbl->parts, 0, sizeof *lbl->parts * WSC_LABEL_PARTS);
-    lbl->place = WSC_INVAL_PLACE;
+    memset(lbl->parts, 0, WSL_PARTS_BYTE);
+    lbl->place = WSL_INVAL_PLACE;
 
-    while (i < WSC_MAX_LABEL_SIZE) {
-        lbl->parts[2*i / WSC_LABEL_INT_BIT] |= (wsi_lbl_int_t)ch << (2*i % WSC_LABEL_INT_BIT);
-        ch = wsi_rb_get(rb); i += 1;
+    while (i < WSC_MAX_LABEL_SIZE * 2) {
+        lbl->parts[i / WSL_PART_BITS] |= (wsl_part_t)ch << (i % WSL_PART_BITS);
+        ch = wsi_rb_get(rb); i += 2;
         /**/ if (ch == WSA_EOF) return WSE_INCOMPL_LABEL;
         else if (ch == WSA_LF ) break;
     }
-    if (i < WSC_MAX_LABEL_SIZE)
-        lbl->parts[2*i / WSC_LABEL_INT_BIT] |= ch << (2*i % WSC_LABEL_INT_BIT);
+    if (i < WSC_MAX_LABEL_SIZE * 2)
+        lbl->parts[i / WSL_PART_BITS] |= (wsl_part_t)ch << (i % WSL_PART_BITS);
 
     return WSE_OK;
 }
 
 static ws_error_t wsi_parse_flow_ctrl(
-    wsi_array_t* a, wsi_label_list_t* ll, wsi_read_buffer_t* rb
+    wsi_array_t* a, wsl_list_t* ll, wsi_read_buffer_t* rb
 ) {
-    ws_error_t ec; wsi_label_t label; int index;
+    ws_error_t ec; wsi_label_t label; size_t index;
 
     switch (wsi_rb_get(rb)) {
         case WSA_SPACE:
             switch (wsi_rb_get(rb)) {
                 case WSA_SPACE: {
                     if ((ec = wsi_parse_label(rb, &label))) return ec;
-                    index = wsi_label_find(ll, &label);
-                    if (index >= 0 && ll->labels[index].place != WSC_INVAL_PLACE)
-                        return WSE_REDEF_LABEL;
-                    if (index < 0) {
-                        if ((ec = wsi_label_push(ll, &label))) return ec;
-                        index = ll->count - 1;
-                    }
-
+                    if ((ec = wsl_getx(ll, &label, &index))) return ec;
                     if ((ec = wsi_instr_push(a, WSI_MARK))) return ec;
                     ll->labels[index].place = a->count - 1;
                     if ((ec = wsi_instr_push_label(a, &label))) return ec;
@@ -359,26 +301,14 @@ static ws_error_t wsi_parse_flow_ctrl(
 
                 case WSA_TAB: {
                     if ((ec = wsi_parse_label(rb, &label))) return ec;
-                    index = wsi_label_find(ll, &label);
-                    if (index < 0) {
-                        if ((ec = wsi_label_push(ll, &label))) return ec;
-                        index = ll->count - 1;
-                        ll->labels[index].place = WSC_INVAL_PLACE;
-                    }
-
+                    if ((ec = wsl_get(ll, &label, &index))) return ec;
                     if ((ec = wsi_instr_push(a, WSI_CALL))) return ec;
                     if ((ec = wsi_instr_push_address(a, index))) return ec;
                 } break;
 
                 case WSA_LF: {
                     if ((ec = wsi_parse_label(rb, &label))) return ec;
-                    index = wsi_label_find(ll, &label);
-                    if (index < 0) {
-                        if ((ec = wsi_label_push(ll, &label))) return ec;
-                        index = ll->count - 1;
-                        ll->labels[index].place = WSC_INVAL_PLACE;
-                    }
-
+                    if ((ec = wsl_get(ll, &label, &index))) return ec;
                     if ((ec = wsi_instr_push(a, WSI_GOTO))) return ec;
                     if ((ec = wsi_instr_push_address(a, index))) return ec;
                 } break;
@@ -390,26 +320,14 @@ static ws_error_t wsi_parse_flow_ctrl(
             switch (wsi_rb_get(rb)) {
                 case WSA_SPACE: {
                     if ((ec = wsi_parse_label(rb, &label))) return ec;
-                    index = wsi_label_find(ll, &label);
-                    if (index < 0) {
-                        if ((ec = wsi_label_push(ll, &label))) return ec;
-                        index = ll->count - 1;
-                        ll->labels[index].place = WSC_INVAL_PLACE;
-                    }
-
+                    if ((ec = wsl_get(ll, &label, &index))) return ec;
                     if ((ec = wsi_instr_push(a, WSI_IFZR))) return ec;
                     if ((ec = wsi_instr_push_address(a, index))) return ec;
                 } break;
 
                 case WSA_TAB: {
                     if ((ec = wsi_parse_label(rb, &label))) return ec;
-                    index = wsi_label_find(ll, &label);
-                    if (index < 0) {
-                        if ((ec = wsi_label_push(ll, &label))) return ec;
-                        index = ll->count - 1;
-                        ll->labels[index].place = WSC_INVAL_PLACE;
-                    }
-
+                    if ((ec = wsl_get(ll, &label, &index))) return ec;
                     if ((ec = wsi_instr_push(a, WSI_IFNG))) return ec;
                     if ((ec = wsi_instr_push_address(a, index))) return ec;
                 } break;
@@ -445,8 +363,8 @@ ws_error_t ws_compile(
     ws_alloc_t alloc, void* udata
 ) {
     wsi_read_buffer_t rdbuf[1] = {0};
-    wsi_label_list_t lst[1] = {0};
     wsi_array_t arr[1] = {0};
+    wsl_list_t  lst[1] = {0};
 
     ws_code_t* code;
     ws_error_t ec;
@@ -515,15 +433,16 @@ loop_exit:
             if (instr == WSI_PUSH || instr == WSI_COPY || instr == WSI_SLIDE)
                 i += sizeof(ws_int_t);
             if (instr == WSI_MARK)
-                i += sizeof(wsi_lbl_int_t) * WSC_LABEL_PARTS;
+                i += WSL_PARTS_BYTE;
         } else {
             size_t index = wsi_read_address(arr->instrs + i + 1);
             if (index >= lst->count) WSM_THROW(WSE_UNKNOWN_LABEL);
-            if (lst->labels[index].place == WSC_INVAL_PLACE) WSM_THROW(WSE_NODEF_LABEL);
+            if (lst->labels[index].place == WSL_INVAL_PLACE)
+                WSM_THROW(WSE_NODEF_LABEL);
 
             wsi_write_address(arr->instrs + i + 1,
-                lst->labels[index].place + sizeof(wsi_lbl_int_t) * WSC_LABEL_PARTS);
-            i += sizeof(wsi_lbl_int_t);
+                lst->labels[index].place + WSL_PARTS_BYTE);
+            i += sizeof(size_t);
         }
     }
 

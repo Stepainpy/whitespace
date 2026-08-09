@@ -1,4 +1,5 @@
 #include "defines.h"
+#include "label.h"
 
 static ws_int_t wsi_read_int(const wsi_instr_t* src) {
     ws_int_t out = 0; size_t i;
@@ -104,7 +105,7 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
 
             case WSI_MARK:
                 if (!wtr("makr ", 5, 1, out)) return WSE_FAIL_WRITE;
-                ii = i + 1; i += (WSC_MAX_LABEL_SIZE + 3) / 4;
+                ii = i + 1; i += WSL_BYTE;
                 goto write_label;
             case WSI_CALL:
                 if (!wtr("call ", 5, 1, out)) return WSE_FAIL_WRITE;
@@ -126,7 +127,7 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
                 break;
 
             write_label_ext:
-                ii = wsi_read_address(c->instrs + i + 1) - (WSC_MAX_LABEL_SIZE + 3) / 4 + 1;
+                ii = wsi_read_address(c->instrs + i + 1) - WSL_BYTE + 1;
                 i += sizeof(size_t);
             write_label: {
                 size_t j; for (j = 0; j < WSC_MAX_LABEL_SIZE; j++) {

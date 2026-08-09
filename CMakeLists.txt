@@ -44,7 +44,10 @@ set(LIB_HDRS
     include/whitespace/whitespace.h
 )
 set(LIB_SRCS
+    src/defines.h
+    src/label.h
     src/compile.c
+    src/label.c
     src/disasm.c
     src/other.c
 )
