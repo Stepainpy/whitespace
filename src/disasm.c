@@ -1,19 +1,7 @@
 #include "defines.h"
 #include "label.h"
 
-static ws_int_t wsi_read_int(const wsi_instr_t* src) {
-    ws_int_t out = 0; size_t i;
-    for (i = 0; i < sizeof out; i++)
-        out |= (ws_int_t)src[i] << (i * 8);
-    return out;
-}
-
-static size_t wsi_read_address(const wsi_instr_t* src) {
-    size_t out = 0, i;
-    for (i = 0; i < sizeof out; i++)
-        out |= (size_t)src[i] << (i * 8);
-    return out;
-}
+#include <string.h>
 
 static size_t wsi_conv_int(ws_int_t integer, char* out) {
     int neg = integer < 0, sz;
@@ -32,14 +20,17 @@ static size_t wsi_conv_int(ws_int_t integer, char* out) {
 }
 
 ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
-    char intbuf[24] = {0}; size_t i, ii, sz;
+    char intbuf[24] = {0};
+    ws_int_t integer;
+    size_t i, ii, sz;
     if (!c || !wtr) return WSE_INVAL_ARG;
 
     for (i = 0; i < c->count; i++) {
         switch (c->instrs[i]) {
             case WSI_PUSH:
                 if (!wtr("push ", 5, 1, out)) return WSE_FAIL_WRITE;
-                sz = wsi_conv_int(wsi_read_int(c->instrs + i + 1), intbuf);
+                memcpy(&integer, c->instrs + i + 1, sizeof integer);
+                sz = wsi_conv_int(integer, intbuf);
                 if (!wtr(intbuf, sz, 1, out)) return WSE_FAIL_WRITE;
                 i += sizeof(ws_int_t);
                 break;
@@ -56,13 +47,15 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
 
             case WSI_COPY:
                 if (!wtr("copy ", 5, 1, out)) return WSE_FAIL_WRITE;
-                sz = wsi_conv_int(wsi_read_int(c->instrs + i + 1), intbuf);
+                memcpy(&integer, c->instrs + i + 1, sizeof integer);
+                sz = wsi_conv_int(integer, intbuf);
                 if (!wtr(intbuf, sz, 1, out)) return WSE_FAIL_WRITE;
                 i += sizeof(ws_int_t);
                 break;
             case WSI_SLIDE:
                 if (!wtr("slide ", 6, 1, out)) return WSE_FAIL_WRITE;
-                sz = wsi_conv_int(wsi_read_int(c->instrs + i + 1), intbuf);
+                memcpy(&integer, c->instrs + i + 1, sizeof integer);
+                sz = wsi_conv_int(integer, intbuf);
                 if (!wtr(intbuf, sz, 1, out)) return WSE_FAIL_WRITE;
                 i += sizeof(ws_int_t);
                 break;
@@ -127,14 +120,16 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
                 break;
 
             write_label_ext:
-                ii = wsi_read_address(c->instrs + i + 1) - WSL_BYTE + 1;
-                i += sizeof(size_t);
+                memcpy(&ii, c->instrs + i + 1, sizeof ii);
+                ii -= WSL_BYTE - 1;
+                i  += sizeof(size_t);
             write_label: {
-                size_t j; for (j = 0; j < WSC_MAX_LABEL_SIZE; j++) {
-                    wsi_instr_t block = c->instrs[ii + j / 4];
-                    wsa_char_t chr = (block >> ((j % 4) * 2)) & 3;
-                    /**/ if (chr == WSA_SPACE) { if (!wtr("S", 1, 1, out)) return WSE_FAIL_WRITE; }
-                    else if (chr == WSA_TAB  ) { if (!wtr("T", 1, 1, out)) return WSE_FAIL_WRITE; }
+                wsi_label_t label; size_t k;
+                memcpy(label.parts, c->instrs + ii, WSL_PARTS_BYTE);
+                for (k = 0; k < WSL_BITS; k += 2) {
+                    wsa_char_t ch = (label.parts[k / WSL_PART_BITS] >> (k % WSL_PART_BITS)) & 3;
+                    /**/ if (ch == WSA_SPACE) { if (!wtr("S", 1, 1, out)) return WSE_FAIL_WRITE; }
+                    else if (ch == WSA_TAB  ) { if (!wtr("T", 1, 1, out)) return WSE_FAIL_WRITE; }
                     else break;
                 }
             } break;
