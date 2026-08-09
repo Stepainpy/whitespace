@@ -1,3 +1,4 @@
+; Stack manipulations
 S S S/TTSTTSTT/L ; push +219
 S S T/TTSTTSTT/L ; push -219
 
@@ -8,29 +9,25 @@ S LL ; drop
 S TS S/TST/L ; copy 5
 S TL S/TST/L ; slide 5
 
-------------------------------
-
+; Arithmetic
 TS SS ; add
 TS ST ; sub
 TS SL ; mul
 TS TS ; div
 TS TT ; mod
 
-------------------------------
-
+; Heap access
 TT S ; store
 TT T ; retrieve/load
 
-------------------------------
-
+; Input/output
 TL SS ; out-char
 TL ST ; out-int
 
 TL TS ; in-char
 TL TT ; in-int
 
-------------------------------
-
+; Flow control
 L SS STS/L ; mark STS
 L ST STS/L ; call STS
 L SL STS/L ; goto STS
