@@ -12,13 +12,13 @@ endif()
 
 ## Declare library and programs
 
-set(WS_LIB whitespace)
-set(WS_EXE ws )
-set(WS_TRL wst)
-set(WS_DIS wsd)
+set(WS_LIB wsvm)
+set(WS_EXE ws  )
+set(WS_TRL wstl)
+set(WS_DIS wsda)
 
 add_library(${WS_LIB})
-add_library(ws::${WS_LIB} ALIAS ${WS_LIB})
+add_library(whitespace::${WS_LIB} ALIAS ${WS_LIB})
 
 add_executable(${WS_EXE})
 add_executable(${WS_TRL})
@@ -82,10 +82,10 @@ setup_target(${WS_DIS})
 
 ## Create library
 
-set(LIB_HDRS
+set(LIB_HDR
     include/whitespace/whitespace.h
 )
-set(LIB_SRCS
+set(LIB_SRC
     src/defines.h
     src/label.h
 
@@ -97,25 +97,19 @@ set(LIB_SRCS
     src/label.c
 )
 
-target_sources(${WS_LIB} PRIVATE ${LIB_SRCS})
-set_target_properties(${WS_LIB} PROPERTIES PUBLIC_HEADER "${LIB_HDRS}")
+target_sources(${WS_LIB} PRIVATE ${LIB_SRC})
+set_target_properties(${WS_LIB} PROPERTIES PUBLIC_HEADER "${LIB_HDR}")
 
 ## Create program
 
-set(EXE_SRCS src/ws.c)
-
-target_sources(${WS_EXE} PRIVATE ${EXE_SRCS})
+target_sources(${WS_EXE} PRIVATE src/ws.c)
 target_link_libraries(${WS_EXE} PRIVATE ${WS_LIB})
 
 ## Create translator
 
-set(TRL_SRCS src/wst.c)
-
-target_sources(${WS_TRL} PRIVATE ${TRL_SRCS})
+target_sources(${WS_TRL} PRIVATE src/wstl.c)
 
 ## Create disassembler
 
-set(DIS_SRCS src/wsd.c)
-
-target_sources(${WS_DIS} PRIVATE ${DIS_SRCS})
+target_sources(${WS_DIS} PRIVATE src/wsda.c)
 target_link_libraries(${WS_DIS} PRIVATE ${WS_LIB})
