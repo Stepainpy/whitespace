@@ -32,5 +32,7 @@ int main(int argc, char* argv[]) {
 cleanup:
     if (code) ws_destroy(code);
     if (source) fclose(source);
+    if (ec) fprintf(stderr,
+        "[ERROR]: %s\n", ws_strerror(ec));
     return ec;
 }

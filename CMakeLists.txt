@@ -90,9 +90,11 @@ set(LIB_SRCS
     src/label.h
 
     src/compile.c
-    src/label.c
     src/disasm.c
+    src/error.c
     src/other.c
+
+    src/label.c
 )
 
 target_sources(${WS_LIB} PRIVATE ${LIB_SRCS})

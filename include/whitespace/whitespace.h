@@ -20,18 +20,25 @@ typedef size_t (*ws_wrfn_t)(const void* src, size_t size, size_t count, void* us
 /* Error handling */
 
 typedef enum {
+    /* Success (no error) */
     WSE_OK = 0,
 
+    /* Arguments and callbacks */
     WSE_INVAL_ARG,
     WSE_NO_MEMORY,
     WSE_NO_SHRINK,
+    WSE_FAIL_WRITE,
+
+    /* Instructions */
     WSE_INVAL_INSTR,
     WSE_INCOMPL_INSTR,
 
+    /* Integers */
     WSE_INVAL_SIGN,
     WSE_INT_OVERFLOW,
     WSE_INCOMPL_INT,
 
+    /* Labels */
     WSE_INVAL_LABEL,
     WSE_TOO_LONG_LABEL,
     WSE_INCOMPL_LABEL,
@@ -39,8 +46,7 @@ typedef enum {
     WSE_NODEF_LABEL,
     WSE_UNKNOWN_LABEL,
 
-    WSE_FAIL_WRITE,
-
+    /* Other */
     WSE_NOT_IMPL
 } ws_error_t;
 
