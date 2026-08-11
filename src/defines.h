@@ -33,7 +33,7 @@ typedef enum {
     /* (-0, +1,  1 ) */ WSI_DUP                    , /* [LF][Space]  */
     /* (-2, +2,  2 ) */ WSI_SWAP                   , /* [LF][Tab]    */
     /* (-1, +0,  1 ) */ WSI_DROP                   , /* [LF][LF]     */
-    /* (-0, +1,  n ) */ WSI_COPY  /* <integer> n */, /* [Tab][Sapce] */
+    /* (-0, +1, i+1) */ WSI_COPY  /* <integer> i */, /* [Tab][Sapce] */
     /* (-n, +0, n+1) */ WSI_SLIDE /* <integer> n */, /* [Tab][LF]    */
 
     /* [Tab][Space] - Arithmetic */

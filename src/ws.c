@@ -1,8 +1,38 @@
 #include <whitespace/whitespace.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
-int main(void) {
-    puts(ws_strerror(WSE_NOT_IMPL));
-    return WSE_NOT_IMPL;
+void* ws_alloc(void* ptr, size_t size, void* ud) {
+    if (size) return realloc(ptr, size);
+    free(ptr); (void)ud; return NULL;
+}
+
+int main(int argc, char* argv[]) {
+    ws_error_t ec = WSE_NOT_IMPL;
+    ws_code_t* code = NULL;
+    FILE* source = NULL;
+
+    --argc, ++argv; /* skip program name */
+
+    if (argc != 1) goto cleanup;
+    source = fopen(*argv, "r");
+    if (!source) goto cleanup;
+
+    ec = ws_compile(&code,
+        source, (ws_rdfn_t)fread, ws_alloc, NULL);
+    if (ec) goto cleanup;
+    fclose(source); source = NULL;
+
+    ec = ws_execute(code,
+        stdin,  (ws_rdfn_t)fread,
+        stdout, (ws_wrfn_t)fwrite);
+    if (ec) goto cleanup;
+
+cleanup:
+    if (code) ws_destroy(code);
+    if (source) fclose(source);
+    if (ec) fprintf(stderr,
+        "[ERROR]: %s\n", ws_strerror(ec));
+    return ec;
 }

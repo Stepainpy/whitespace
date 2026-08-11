@@ -27,11 +27,14 @@ typedef enum {
     WSE_INVAL_ARG,
     WSE_NO_MEMORY,
     WSE_NO_SHRINK,
+    WSE_FAIL_READ,
     WSE_FAIL_WRITE,
 
     /* Instructions */
+    WSE_INVAL_PARAM,
     WSE_INVAL_INSTR,
     WSE_INCOMPL_INSTR,
+    WSE_UNKNOWN_INSTR,
 
     /* Integers */
     WSE_INVAL_SIGN,
@@ -46,7 +49,22 @@ typedef enum {
     WSE_NODEF_LABEL,
     WSE_UNKNOWN_LABEL,
 
+    /* Stacks */
+    WSE_STACK_OVERFLOW,
+    WSE_CALL_OVERFLOW,
+    WSE_CALL_UNDERFLOW,
+    WSE_NOT_ENOUGH,
+    WSE_OUT_OF_BOUNDS,
+
+    /* HEAP */
+    WSE_SIGSEGV,
+
+    /* Input/Output */
+    WSE_INVAL_UTF8,
+    WSE_NO_INT,
+
     /* Other */
+    WSE_OUT_OF_CODE,
     WSE_NOT_IMPL
 } ws_error_t;
 

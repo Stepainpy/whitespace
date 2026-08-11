@@ -1,15 +1,38 @@
-S S S/T/L    ; push 1
-S S S/S/L    ; push 0
+; Counter (for get F[0...n])
+S S S//L ; push 0
+TL TT    ; in int
 
-L SS S/L     ; mark 'loop'
+; F1 and F0
+S S S/T/L ; push 1
+S S S/S/L ; push 0
 
+L SS S/L ; mark 'loop'
+
+; Output current
 S LS         ; dup
-TL ST        ; out num
+TL ST        ; out int
 S S S/TSTS/L ; push 10
 TL SS        ; out char
 
+; Calculate next
 S TS S/T/L   ; copy 2nd
 TS SS        ; add
 S LT         ; swap
 
+; Check counter
+S S S//L ; push 0
+TT T     ; load
+S LS     ; dup
+L TS T/L ; jz 'break'
+
+; Update counter
+S S S/T/L ; push 1
+TS ST     ; sub
+S S S//L  ; push 0
+S LT      ; swap
+TT S      ; store
+
 L SL S/L     ; goto 'loop'
+
+L SS T/L ; mark 'break'
+LLL      ; exit

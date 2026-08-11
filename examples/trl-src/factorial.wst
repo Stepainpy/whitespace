@@ -1,0 +1,26 @@
+S S S//L ; push 0
+S LS     ; dup
+TL TT    ; in int
+TT T     ; load
+
+L ST S/L     ; call 'fact(n)'
+TL ST        ; out int
+S S S/TSTS/L ; push '\n'
+TL SS        ; out char
+LLL          ; exit
+
+L SS S/L ; int fact(int n)
+
+S LS       ; dup
+S S S/TS/L ; push 2
+TS ST      ; sub
+L TT ST/L  ; js 'ret'
+
+S LS      ; dup
+S S S/T/L ; push 1
+TS ST     ; sub
+L ST S/L  ; call 'fact(n - 1)'
+TS SL     ; mul
+
+L SS ST/L ; mark 'ret'
+L TL      ; return

@@ -114,12 +114,15 @@ static ws_error_t wsi_parse_stk_manip(wsi_array_t* a, wsi_read_buffer_t* rb) {
             switch (wsi_rb_get(rb)) {
                 case WSA_SPACE:
                     if ((ec = wsi_parse_integer(rb, &arg))) return ec;
+                    if (arg < 0) return WSE_INVAL_PARAM;
                     if ((ec = wsi_instr_push(a, WSI_COPY))) return ec;
                     if ((ec = wsi_instr_push_data(a, &arg, sizeof arg))) return ec;
                     break;
 
                 case WSA_LF:
                     if ((ec = wsi_parse_integer(rb, &arg))) return ec;
+                    if (arg < 0) return WSE_INVAL_PARAM;
+                    if (arg == 0) break;
                     if ((ec = wsi_instr_push(a, WSI_SLIDE))) return ec;
                     if ((ec = wsi_instr_push_data(a, &arg, sizeof arg))) return ec;
                     break;

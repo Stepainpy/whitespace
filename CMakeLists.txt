@@ -90,6 +90,7 @@ set(LIB_SRC
     src/label.h
 
     src/compile.c
+    src/execute.c
     src/disasm.c
     src/error.c
     src/other.c
