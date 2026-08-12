@@ -6,7 +6,7 @@
 /* Constants and types */
 
 #define WSC_MAX_HEAP_SIZE 1024
-#define WSC_MAX_LABEL_SIZE 64
+#define WSC_MAX_LABEL_SIZE 128
 
 #define WSC_S_CHAR '\x20'
 #define WSC_T_CHAR '\x09'

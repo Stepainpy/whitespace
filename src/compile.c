@@ -243,6 +243,8 @@ static ws_error_t wsi_parse_label(wsi_read_buffer_t* rb, wsi_label_t* lbl) {
         /**/ if (ch == WSA_EOF) return WSE_INCOMPL_LABEL;
         else if (ch == WSA_LF ) break;
     }
+    if (ch == WSA_SPACE || ch == WSA_TAB) return WSE_TOO_LONG_LABEL;
+    if (ch == WSA_EOF) return WSE_INCOMPL_LABEL;
     if (i < WSL_BITS)
         lbl->parts[i / WSL_PART_BITS] |= (wsl_part_t)ch << (i % WSL_PART_BITS);
 
