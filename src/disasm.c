@@ -3,6 +3,8 @@
 
 #include <string.h>
 
+#define ZEROS "00""000""000""000""000""000""000"
+
 static size_t wsi_conv_int(ws_int_t integer, char* out) {
     int neg = integer < 0, sz;
     char* end = out;
@@ -19,16 +21,44 @@ static size_t wsi_conv_int(ws_int_t integer, char* out) {
     return sz;
 }
 
+static size_t wsi_conv_address(size_t address, char* out) {
+    size_t sz; char* end = out;
+
+    do *end++ = '0' + address % 10; while (address /= 10);
+    sz = end - out;
+    for (--end; out < end; ++out, --end) {
+        char t = *out; *out = *end; *end = t;
+    }
+
+    return sz;
+}
+
+static size_t wsi_address_width(size_t max) {
+    size_t width = 1;
+    while (max /= 10) ++width;
+    return width;
+}
+
 ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
     char intbuf[24] = {0};
+    size_t i, ii, sz, aw;
     ws_int_t integer;
-    size_t i, ii, sz;
-    if (!c || !wtr) return WSE_INVAL_ARG;
+
+    if (!c || !c->instrs || !wtr) return WSE_INVAL_ARG;
+
+    aw = wsi_address_width(c->count - 1);
 
     for (i = 0; i < c->count; i++) {
         wse_instr_t instr = c->instrs[i];
+
+        sz = wsi_conv_address(i, intbuf);
+        if (sz < aw && !wtr(ZEROS, aw - sz, 1, out)) return WSE_FAIL_WRITE;
+        if (!wtr(intbuf, sz, 1, out)) return WSE_FAIL_WRITE;
+        if (!wtr(" ", 1, 1, out)) return WSE_FAIL_WRITE;
+
         if (instr != WSI_MARK)
             if (!wtr("    ", 4, 1, out)) return WSE_FAIL_WRITE;
+
         switch (instr) {
             case WSI_PUSH:
                 if (!wtr("push ", 5, 1, out)) return WSE_FAIL_WRITE;
@@ -141,8 +171,10 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
                 if (!wtr("<unknown>", 9, 1, out)) return WSE_FAIL_WRITE;
                 break;
         }
+
         if (instr == WSI_MARK)
             if (!wtr(":", 1, 1, out)) return WSE_FAIL_WRITE;
+
         if (!wtr("\n", 1, 1, out)) return WSE_FAIL_WRITE;
     }
 

@@ -24,10 +24,8 @@ int main(int argc, char* argv[]) {
     if (ec) goto cleanup;
     fclose(source); source = NULL;
 
-    puts("==== BEGIN ====");
     ec = ws_disasm(code, stdout, (ws_wrfn_t)fwrite);
     if (ec) goto cleanup;
-    puts("===== END =====");
 
 cleanup:
     if (code) ws_destroy(code);
