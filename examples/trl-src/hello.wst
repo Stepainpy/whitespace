@@ -1,0 +1,31 @@
+S S S/SSSSSSS/L ; push '\0'
+S S S/SSSTSTS/L ; push '\n'
+S S S/STSSSST/L ; push '!'
+S S S/TTSSTSS/L ; push 'd'
+S S S/TTSTTSS/L ; push 'l'
+S S S/TTTSSTS/L ; push 'r'
+S S S/TTSTTTT/L ; push 'o'
+S S S/TTTSTTT/L ; push 'w'
+S S S/STSSSSS/L ; push ' '
+S S S/STSTTSS/L ; push ','
+S S S/TTSTTTT/L ; push 'o'
+S S S/TTSTTSS/L ; push 'l'
+S S S/TTSTTSS/L ; push 'l'
+S S S/TTSSTST/L ; push 'e'
+S S S/TSSTSSS/L ; push 'H'
+
+L ST ST/L ; call put_str
+L LL      ; exit
+
+L SS ST/L ; func put_str
+
+S LS        ; dup
+L TS ST_S/L ; jz 'end'
+
+TL SS     ; out-char
+L SL ST/L ; goto put_str
+
+L SS ST_S/L ; mark 'end'
+
+S LL ; drop
+L TL ; return

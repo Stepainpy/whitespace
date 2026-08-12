@@ -1,0 +1,30 @@
+S S S/SSSSSSSSSSS/L ; push '\0'
+S S S/SSSSSSSTSTS/L ; push '\n'
+S S S/SSSSSTSSSST/L ; push '!'
+S S S/TSSSTSSSSSS/L ; push 'р'
+S S S/TSSSSTTTSSS/L ; push 'и'
+S S S/TSSSSTTTTSS/L ; push 'м'
+S S S/SSSSSTSSSSS/L ; push ' '
+S S S/SSSSSTSTTSS/L ; push ','
+S S S/TSSSTSSSSTS/L ; push 'т'
+S S S/TSSSSTTSTST/L ; push 'е'
+S S S/TSSSSTTSSTS/L ; push 'в'
+S S S/TSSSSTTTSSS/L ; push 'и'
+S S S/TSSSTSSSSSS/L ; push 'р'
+S S S/TSSSSSTTTTT/L ; push 'П'
+
+L ST ST/L ; call put_str
+L LL      ; exit
+
+L SS ST/L ; func put_str
+
+S LS        ; dup
+L TS ST_S/L ; jz 'end'
+
+TL SS     ; out-char
+L SL ST/L ; goto put_str
+
+L SS ST_S/L ; mark 'end'
+
+S LL ; drop
+L TL ; return
