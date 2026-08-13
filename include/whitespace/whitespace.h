@@ -44,6 +44,7 @@ typedef enum {
     /* Labels */
     WSE_INVAL_LABEL,
     WSE_TOO_LONG_LABEL,
+    WSE_TOO_MANY_LABELS,
     WSE_INCOMPL_LABEL,
     WSE_REDEF_LABEL,
     WSE_NODEF_LABEL,

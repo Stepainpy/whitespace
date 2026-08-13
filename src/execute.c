@@ -1,5 +1,4 @@
 #include "defines.h"
-#include "label.h"
 
 #include <string.h>
 
@@ -137,8 +136,9 @@ ws_error_t ws_execute(ws_code_t* c,
     wss_call_t cstk[1] = {0};
     ws_int_t* heap = NULL;
     ws_int_t arg, idx, a, b;
+    wsl_index_t lbl_idx;
     ws_error_t ec;
-    size_t i, ip;
+    size_t i;
 
     if (!c || !c->instrs || !rdr || !wtr) return WSE_INVAL_ARG;
 
@@ -156,7 +156,7 @@ ws_error_t ws_execute(ws_code_t* c,
     heap = c->alloc(NULL, sizeof *heap * WSC_MAX_HEAP_SIZE, c->udata);
     if (!heap) WSM_THROW(WSE_NO_MEMORY);
 
-    for (i = 0; i < c->count; i++)
+    for (i = 0; i < c->icnt; i++)
         switch (c->instrs[i]) {
 
             /* Stack manipulation */
@@ -292,32 +292,32 @@ ws_error_t ws_execute(ws_code_t* c,
             /* Flow control */
 
             case WSI_MARK:
-                i += WSL_BYTE;
+                i += sizeof(wsl_index_t);
                 break;
 
             case WSI_CALL:
-                memcpy(&ip, c->instrs + i + 1, sizeof ip); i += sizeof ip;
+                memcpy(&lbl_idx, c->instrs + i + 1, sizeof lbl_idx); i += sizeof lbl_idx;
                 if (wss_call_push(cstk, i)) WSM_THROW(WSE_CALL_OVERFLOW);
-                i = ip;
+                i = c->labels[lbl_idx].place + sizeof(wsl_index_t);
                 break;
 
             case WSI_GOTO:
-                memcpy(&ip, c->instrs + i + 1, sizeof ip); i += sizeof ip;
-                i = ip;
+                memcpy(&lbl_idx, c->instrs + i + 1, sizeof lbl_idx); i += sizeof lbl_idx;
+                i = c->labels[lbl_idx].place + sizeof(wsl_index_t);
                 break;
 
             case WSI_IFZR:
                 if (dstk->count < 1) WSM_THROW(WSE_NOT_ENOUGH);
-                memcpy(&ip, c->instrs + i + 1, sizeof ip); i += sizeof ip;
+                memcpy(&lbl_idx, c->instrs + i + 1, sizeof lbl_idx); i += sizeof lbl_idx;
                 arg = dstk->values[--dstk->count];
-                if (arg == 0) i = ip;
+                if (arg == 0) i = c->labels[lbl_idx].place + sizeof(wsl_index_t);
                 break;
 
             case WSI_IFNG:
                 if (dstk->count < 1) WSM_THROW(WSE_NOT_ENOUGH);
-                memcpy(&ip, c->instrs + i + 1, sizeof ip); i += sizeof ip;
+                memcpy(&lbl_idx, c->instrs + i + 1, sizeof lbl_idx); i += sizeof lbl_idx;
                 arg = dstk->values[--dstk->count];
-                if (arg < 0) i = ip;
+                if (arg < 0) i = c->labels[lbl_idx].place + sizeof(wsl_index_t);
                 break;
 
             case WSI_RET:

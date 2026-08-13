@@ -21,6 +21,7 @@ const char* ws_strerror(ws_error_t error) {
 
         case WSE_INVAL_LABEL: return "invalid label name";
         case WSE_TOO_LONG_LABEL: return "label name too long";
+        case WSE_TOO_MANY_LABELS: return "too many labels defined";
         case WSE_INCOMPL_LABEL: return "unfinished label name";
         case WSE_REDEF_LABEL: return "redefinition label";
         case WSE_NODEF_LABEL: return "label not defined";

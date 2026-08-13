@@ -1,5 +1,4 @@
 #include "defines.h"
-#include "label.h"
 
 #include <string.h>
 
@@ -235,18 +234,18 @@ static ws_error_t wsi_parse_label(wsi_read_buffer_t* rb, wsi_label_t* lbl) {
     else if (ch == WSA_EOF) return WSE_INCOMPL_LABEL;
 
     memset(lbl->parts, 0, WSL_PARTS_BYTE);
-    lbl->place = WSL_INVAL_PLACE;
 
-    while (i < WSL_BITS) {
-        lbl->parts[i / WSL_PART_BITS] |= (wsl_part_t)ch << (i % WSL_PART_BITS);
-        ch = wsi_rb_get(rb); i += 2;
-        /**/ if (ch == WSA_EOF) return WSE_INCOMPL_LABEL;
-        else if (ch == WSA_LF ) break;
-    }
-    if (ch == WSA_SPACE || ch == WSA_TAB) return WSE_TOO_LONG_LABEL;
+    do {
+        wsl_part_t bit = ch == WSA_TAB;
+        lbl->parts[i / WSL_PART_BITS] |= bit << (i % WSL_PART_BITS);
+        ch = wsi_rb_get(rb);
+        if (WSA_EOF) return WSE_INCOMPL_LABEL;
+    } while (++i < WSL_BITS && ch != WSA_LF);
     if (ch == WSA_EOF) return WSE_INCOMPL_LABEL;
-    if (i < WSL_BITS)
-        lbl->parts[i / WSL_PART_BITS] |= (wsl_part_t)ch << (i % WSL_PART_BITS);
+    if (ch != WSA_LF ) return WSE_TOO_LONG_LABEL;
+
+    lbl->place = WSL_INVAL_PLACE;
+    lbl->length = i;
 
     return WSE_OK;
 }
@@ -254,7 +253,7 @@ static ws_error_t wsi_parse_label(wsi_read_buffer_t* rb, wsi_label_t* lbl) {
 static ws_error_t wsi_parse_flow_ctrl(
     wsi_array_t* a, wsl_list_t* ll, wsi_read_buffer_t* rb
 ) {
-    ws_error_t ec; wsi_label_t label; size_t index;
+    ws_error_t ec; wsi_label_t label; wsl_index_t index;
 
     switch (wsi_rb_get(rb)) {
         case WSA_SPACE:
@@ -264,7 +263,7 @@ static ws_error_t wsi_parse_flow_ctrl(
                     if ((ec = wsl_getx(ll, &label, &index))) return ec;
                     if ((ec = wsi_instr_push(a, WSI_MARK))) return ec;
                     ll->labels[index].place = a->count - 1;
-                    if ((ec = wsi_instr_push_data(a, label.parts, WSL_PARTS_BYTE))) return ec;
+                    if ((ec = wsi_instr_push_data(a, &index, sizeof index))) return ec;
                 } break;
 
                 case WSA_TAB: {
@@ -401,26 +400,26 @@ loop_exit:
             if (instr == WSI_PUSH || instr == WSI_COPY || instr == WSI_SLIDE)
                 i += sizeof(ws_int_t);
             if (instr == WSI_MARK)
-                i += WSL_PARTS_BYTE;
+                i += sizeof(wsl_index_t);
         } else {
-            size_t index, address;
+            wsl_index_t index;
             memcpy(&index, arr->instrs + i + 1, sizeof index);
             if (index >= lst->count) WSM_THROW(WSE_UNKNOWN_LABEL);
             if (lst->labels[index].place == WSL_INVAL_PLACE)
                 WSM_THROW(WSE_NODEF_LABEL);
-
-            address = lst->labels[index].place + WSL_PARTS_BYTE;
-            memcpy(arr->instrs + i + 1, &address, sizeof address);
-            i += sizeof(size_t);
+            i += sizeof(wsl_index_t);
         }
     }
 
     code->instrs = alloc(arr->instrs, arr->count, udata);
     if (arr->count && !code->instrs) WSM_THROW(WSE_NO_SHRINK);
-    code->count = arr->count;
+    code->icnt = arr->count;
+
+    code->labels = alloc(lst->labels, lst->count * sizeof *lst->labels, udata);
+    if (lst->count && !code->labels) WSM_THROW(WSE_NO_SHRINK);
+    code->lcnt = lst->count;
 
     *cptr = code;
-    alloc(lst->labels, 0, udata);
     return WSE_OK;
 error:
     alloc(lst->labels, 0, udata);

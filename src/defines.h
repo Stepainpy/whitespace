@@ -2,11 +2,11 @@
 #define WS_DEFINES_H
 
 #include <whitespace/whitespace.h>
+#include "label.h"
 
 /* Constants and types */
 
 #define WSC_MAX_HEAP_SIZE 1024
-#define WSC_MAX_LABEL_SIZE 128
 
 #define WSC_S_CHAR '\x20'
 #define WSC_T_CHAR '\x09'
@@ -70,7 +70,8 @@ typedef enum {
 typedef unsigned char wsi_instr_t;
 
 struct ws_code_t {
-    wsi_instr_t* instrs; size_t count;
+    wsi_instr_t* instrs; size_t icnt;
+    wsi_label_t* labels; size_t lcnt;
     ws_alloc_t alloc; void* udata;
 };
 

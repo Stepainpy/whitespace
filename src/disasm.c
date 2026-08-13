@@ -1,5 +1,4 @@
 #include "defines.h"
-#include "label.h"
 
 #include <string.h>
 
@@ -41,14 +40,15 @@ static size_t wsi_address_width(size_t max) {
 
 ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
     char intbuf[24] = {0};
-    size_t i, ii, sz, aw;
+    wsl_index_t lbl_idx;
     ws_int_t integer;
+    size_t i, j, sz, aw;
 
     if (!c || !c->instrs || !wtr) return WSE_INVAL_ARG;
 
-    aw = wsi_address_width(c->count - 1);
+    aw = wsi_address_width(c->icnt - 1);
 
-    for (i = 0; i < c->count; i++) {
+    for (i = 0; i < c->icnt; i++) {
         wse_instr_t instr = c->instrs[i];
 
         sz = wsi_conv_address(i, intbuf);
@@ -130,20 +130,19 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
                 break;
 
             case WSI_MARK:
-                ii = i + 1; i += WSL_BYTE;
                 goto write_label;
             case WSI_CALL:
                 if (!wtr("call ", 5, 1, out)) return WSE_FAIL_WRITE;
-                goto write_label_ext;
+                goto write_label;
             case WSI_GOTO:
                 if (!wtr("goto ", 5, 1, out)) return WSE_FAIL_WRITE;
-                goto write_label_ext;
+                goto write_label;
             case WSI_IFZR:
                 if (!wtr("if-zero ", 8, 1, out)) return WSE_FAIL_WRITE;
-                goto write_label_ext;
+                goto write_label;
             case WSI_IFNG:
                 if (!wtr("if-neg ", 7, 1, out)) return WSE_FAIL_WRITE;
-                goto write_label_ext;
+                goto write_label;
             case WSI_RET:
                 if (!wtr("ret", 3, 1, out)) return WSE_FAIL_WRITE;
                 break;
@@ -151,20 +150,13 @@ ws_error_t ws_disasm(ws_code_t* c, void* out, ws_wrfn_t wtr) {
                 if (!wtr("exit", 4, 1, out)) return WSE_FAIL_WRITE;
                 break;
 
-            write_label_ext:
-                memcpy(&ii, c->instrs + i + 1, sizeof ii);
-                ii -= WSL_BYTE - 1;
-                i  += sizeof(size_t);
-            write_label: {
-                wsi_label_t label; size_t k;
-                memcpy(label.parts, c->instrs + ii, WSL_PARTS_BYTE);
-                for (k = 0; k < WSL_BITS; k += 2) {
-                    wsa_char_t ch = (label.parts[k / WSL_PART_BITS] >> (k % WSL_PART_BITS)) & 3;
-                    /**/ if (ch == WSA_SPACE) { if (!wtr("S", 1, 1, out)) return WSE_FAIL_WRITE; }
-                    else if (ch == WSA_TAB  ) { if (!wtr("T", 1, 1, out)) return WSE_FAIL_WRITE; }
-                    else break;
+            write_label:
+                memcpy(&lbl_idx, c->instrs + i + 1, sizeof lbl_idx); i += sizeof lbl_idx;
+                for (j = 0; j < c->labels[lbl_idx].length; j++) {
+                    wsl_part_t bit = (c->labels[lbl_idx].parts[j / WSL_PART_BITS] >> (j % WSL_PART_BITS)) & 1;
+                    if (!wtr("ST" + bit, 1, 1, out)) return WSE_FAIL_WRITE;
                 }
-            } break;
+                break;
 
             default:
             case WSI_UNKNOWN:
