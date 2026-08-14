@@ -345,15 +345,15 @@ ws_error_t ws_compile(
     code = alloc(NULL, sizeof *code, udata);
     if (!code) return WSE_NO_MEMORY;
     memset(code, 0, sizeof *code);
-    code->alloc = arr->fn = alloc;
-    code->udata = arr->ud = udata;
+    code->alloc = arr->fn = lst->fn = alloc;
+    code->udata = arr->ud = lst->ud = udata;
 
-    arr->instrs = alloc(NULL,
-        (arr->capacity = WSC_INIT_INSTR_CAP), udata);
+    arr->instrs = arr->fn(NULL,
+        (arr->capacity = WSC_INIT_INSTR_CAP), arr->ud);
     if (!arr->instrs) WSM_THROW(WSE_NO_MEMORY);
 
-    lst->labels = alloc(NULL,
-        (lst->capacity = WSC_INIT_LABEL_CAP) * sizeof *lst->labels, udata);
+    lst->labels = lst->fn(NULL, sizeof *lst->labels *
+        (lst->capacity = WSC_INIT_LABEL_CAP), lst->ud);
     if (!lst->labels) WSM_THROW(WSE_NO_MEMORY);
 
     while (1) {
@@ -422,8 +422,8 @@ loop_exit:
     *cptr = code;
     return WSE_OK;
 error:
-    alloc(lst->labels, 0, udata);
-    alloc(arr->instrs, 0, udata);
+    lst->fn(lst->labels, 0, lst->ud);
+    arr->fn(arr->instrs, 0, arr->ud);
     alloc(code, 0, udata);
     return ec;
 }

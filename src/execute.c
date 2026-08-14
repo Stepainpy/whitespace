@@ -6,6 +6,9 @@
 
 #define WSC_INIT_DATA_CAP 16
 #define WSC_INIT_CALL_CAP 16
+#define WSC_INIT_PAGE_CAP 1
+
+#define WSC_HEAP_PAGE_SIZE 64
 
 #define WSS_STRUCT(type) \
     struct { type* values; size_t count, capacity; ws_alloc_t fn; void* ud; }
@@ -41,6 +44,50 @@ WSS_PUSH   (data, wss_data_t, ws_int_t)
 typedef WSS_STRUCT(size_t) wss_call_t;
 WSS_RESERVE(call, wss_call_t)
 WSS_PUSH   (call, wss_call_t, size_t)
+
+typedef struct {
+    size_t base;
+    ws_int_t data[WSC_HEAP_PAGE_SIZE];
+} wsh_page_t;
+
+typedef struct {
+    wsh_page_t* pages;
+    size_t count, capacity;
+    ws_alloc_t fn; void* ud;
+} wsi_heap_t;
+
+static ws_error_t wsh_reserve(wsi_heap_t* h) {
+    size_t newcap; void* newptr;
+    if (h->count + 1 <= h->capacity) return WSE_OK;
+
+    newcap = h->capacity;
+    while (h->count + 1 > newcap)
+        newcap = (newcap * 207 + 127) / 128;
+
+    newptr = h->fn(h->pages, sizeof *h->pages * newcap, h->ud);
+    if (!newptr) return WSE_NO_MEMORY;
+
+    h->pages    = newptr;
+    h->capacity = newcap;
+    return WSE_OK;
+}
+
+static ws_int_t* wsh_get(wsi_heap_t* h, size_t address) {
+    wsh_page_t* page; size_t i;
+
+    for (i = 0; i < h->count; i++) {
+        page = h->pages + i;
+        if (page->base <= address && address < page->base + WSC_HEAP_PAGE_SIZE)
+            goto get_address;
+    }
+
+    if (wsh_reserve(h)) return NULL;
+    page = h->pages + h->count++;
+    page->base = address - address % WSC_HEAP_PAGE_SIZE;
+
+get_address:
+    return page->data + address - page->base;
+}
 
 static ws_error_t wsi_put_utf8(void* out, ws_wrfn_t wtr, ws_int_t chr) {
     unsigned char buf[4], cnt = 0;
@@ -109,7 +156,7 @@ static ws_error_t wsi_get_utf8(void* in, ws_rdfn_t rdr, ws_int_t* chr) {
 
 static ws_error_t wsi_get_int(void* in, ws_rdfn_t rdr, ws_int_t* Int) {
 #define GETC() (rdr(&chr, 1, 1, in) ? chr : (chr = EOF))
-    int chr; int neg = 0; *Int = 0;
+    int chr = 0; int neg = 0; *Int = 0;
 
     do GETC(); while (chr == ' ' || chr == '\t' || chr == '\n');
 
@@ -134,27 +181,29 @@ ws_error_t ws_execute(ws_code_t* c,
 ) {
     wss_data_t dstk[1] = {0};
     wss_call_t cstk[1] = {0};
-    ws_int_t* heap = NULL;
-    ws_int_t arg, idx, a, b;
+    wsi_heap_t heap[1] = {0};
     wsl_index_t lbl_idx;
+    ws_int_t a, b, *ptr;
+    ws_int_t arg, idx;
     ws_error_t ec;
     size_t i;
 
     if (!c || !c->instrs || !rdr || !wtr) return WSE_INVAL_ARG;
 
-    dstk->fn = cstk->fn = c->alloc;
-    dstk->ud = cstk->ud = c->udata;
+    dstk->fn = cstk->fn = heap->fn = c->alloc;
+    dstk->ud = cstk->ud = heap->ud = c->udata;
 
-    dstk->values = dstk->fn(NULL,
-        (dstk->capacity = sizeof *dstk->values * WSC_INIT_DATA_CAP), dstk->ud);
+    dstk->values = dstk->fn(NULL, sizeof *dstk->values *
+        (dstk->capacity = WSC_INIT_DATA_CAP), dstk->ud);
     if (!dstk->values) WSM_THROW(WSE_NO_MEMORY);
 
-    cstk->values = cstk->fn(NULL,
-        (cstk->capacity = sizeof *cstk->values * WSC_INIT_DATA_CAP), cstk->ud);
+    cstk->values = cstk->fn(NULL, sizeof *cstk->values *
+        (cstk->capacity = WSC_INIT_CALL_CAP), cstk->ud);
     if (!cstk->values) WSM_THROW(WSE_NO_MEMORY);
 
-    heap = c->alloc(NULL, sizeof *heap * WSC_MAX_HEAP_SIZE, c->udata);
-    if (!heap) WSM_THROW(WSE_NO_MEMORY);
+    heap-> pages = heap->fn(NULL, sizeof *heap-> pages *
+        (heap->capacity = WSC_INIT_PAGE_CAP), heap->ud);
+    if (!heap-> pages) WSM_THROW(WSE_NO_MEMORY);
 
     for (i = 0; i < c->icnt; i++)
         switch (c->instrs[i]) {
@@ -247,15 +296,15 @@ ws_error_t ws_execute(ws_code_t* c,
                 if (dstk->count < 2) WSM_THROW(WSE_NOT_ENOUGH);
                 arg = dstk->values[--dstk->count];
                 idx = dstk->values[--dstk->count];
-                if (idx < 0 || WSC_MAX_HEAP_SIZE <= idx) WSM_THROW(WSE_SIGSEGV);
-                heap[idx] = arg;
+                if (!(ptr = wsh_get(heap, idx))) WSM_THROW(WSE_SIGSEGV);
+                *ptr = arg;
                 break;
 
             case WSI_LOAD:
                 if (dstk->count < 1) WSM_THROW(WSE_NOT_ENOUGH);
                 idx = dstk->values[--dstk->count];
-                if (idx < 0 || WSC_MAX_HEAP_SIZE <= idx) WSM_THROW(WSE_SIGSEGV);
-                if (wss_data_push(dstk, heap[idx])) WSM_THROW(WSE_STACK_OVERFLOW);
+                if (!(ptr = wsh_get(heap, idx))) WSM_THROW(WSE_SIGSEGV);
+                if (wss_data_push(dstk, *ptr)) WSM_THROW(WSE_STACK_OVERFLOW);
                 break;
 
             /* I/O */
@@ -276,17 +325,17 @@ ws_error_t ws_execute(ws_code_t* c,
             case WSI_IN_CHAR:
                 if (dstk->count < 1) WSM_THROW(WSE_NOT_ENOUGH);
                 idx = dstk->values[--dstk->count];
-                if (idx < 0 || WSC_MAX_HEAP_SIZE <= idx) WSM_THROW(WSE_SIGSEGV);
+                if (!(ptr = wsh_get(heap, idx))) WSM_THROW(WSE_SIGSEGV);
                 if ((ec = wsi_get_utf8(in, rdr, &arg))) goto error;
-                heap[idx] = arg;
+                *ptr = arg;
                 break;
 
             case WSI_IN_INT:
                 if (dstk->count < 1) WSM_THROW(WSE_NOT_ENOUGH);
                 idx = dstk->values[--dstk->count];
-                if (idx < 0 || WSC_MAX_HEAP_SIZE <= idx) WSM_THROW(WSE_SIGSEGV);
+                if (!(ptr = wsh_get(heap, idx))) WSM_THROW(WSE_SIGSEGV);
                 if ((ec = wsi_get_int(in, rdr, &arg))) goto error;
-                heap[idx] = arg;
+                *ptr = arg;
                 break;
 
             /* Flow control */
@@ -339,8 +388,8 @@ ws_error_t ws_execute(ws_code_t* c,
 loop_exit:
     ec = WSE_OK;
 error:
-    dstk->fn(dstk->values, 0, dstk->ud);
+    heap->fn(heap-> pages, 0, heap->ud);
     cstk->fn(cstk->values, 0, cstk->ud);
-    c->alloc(heap, 0, c->udata);
+    dstk->fn(dstk->values, 0, dstk->ud);
     return ec;
 }
