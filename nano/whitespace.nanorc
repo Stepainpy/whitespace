@@ -1,0 +1,7 @@
+## Syntax highlight for Whitespace.
+
+syntax whitespace "\.ws$"
+tabgives "	"
+
+color ,lightblue " "
+color ,lightred  "	"

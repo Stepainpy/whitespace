@@ -1,0 +1,12 @@
+## Syntax highlight for Whitespace Translate.
+
+syntax whitespace "\.wst$"
+comment ";"
+
+color lightblue  "S"
+color lightred   "T"
+color lightgreen "L"
+
+color grey ";.*$"
+
+color ,green "[[:space:]]+$"
