@@ -127,7 +127,7 @@ static ws_error_t wsi_get_utf8(void* in, ws_rdfn_t rdr, ws_int_t* chr) {
     unsigned char buf[4], cnt;
     if (!rdr(buf, 1, 1, in)) return WSE_FAIL_READ;
 
-    /**/ if (        buf[0] && buf[0] < 0x80) cnt = 1;
+    /**/ if (                  buf[0] < 0x80) cnt = 1;
     else if (0xC0 <= buf[0] && buf[0] < 0xDF) cnt = 2;
     else if (0xE0 <= buf[0] && buf[0] < 0xEF) cnt = 3;
     else if (0xF0 <= buf[0] && buf[0] < 0xF7) cnt = 4;
