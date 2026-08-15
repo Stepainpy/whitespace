@@ -2,25 +2,11 @@
 
 #include <string.h>
 
-static ws_error_t wsl_reserve(wsl_list_t* l) {
-    size_t newcap; void* newptr;
-    if (l->count + 1 <= l->capacity) return WSE_OK;
-
-    newcap = l->capacity;
-    while (l->count + 1 > newcap)
-        newcap = (newcap * 207 + 127) / 128;
-
-    newptr = l->fn(l->labels, sizeof *l->labels * newcap, l->ud);
-    if (!newptr) return WSE_NO_MEMORY;
-
-    l->labels   = newptr;
-    l->capacity = newcap;
-    return WSE_OK;
-}
+WSM_ARRAY_RESERVE(wsl, wsl_list_t, labels)
 
 ws_error_t wsl_push(wsl_list_t* l, const wsi_label_t* lbl) {
     if (l->count >= WSL_MAX_LABEL_COUNT) return WSE_TOO_MANY_LABELS;
-    if (wsl_reserve(l)) return WSE_NO_MEMORY;
+    if (wsl_reserve(l, 1)) return WSE_NO_MEMORY;
     memcpy(l->labels + l->count++, lbl, sizeof *lbl);
     return WSE_OK;
 }

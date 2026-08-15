@@ -87,6 +87,7 @@ set(LIB_HDR
 )
 set(LIB_SRC
     src/defines.h
+    src/array.h
     src/label.h
 
     src/compile.c

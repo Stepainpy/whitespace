@@ -1,4 +1,5 @@
 #include "defines.h"
+#include "array.h"
 
 #include <string.h>
 
@@ -30,37 +31,14 @@ retry:
     }
 }
 
-typedef struct {
-    wsi_instr_t* instrs;
-    size_t count, capacity;
-    ws_alloc_t fn; void* ud;
-} wsi_array_t;
+typedef WSM_ARRAY_STRUCT(wsi_instr_t, instrs) wsi_instrs_t;
 
-static ws_error_t wsi_instr_reserve(wsi_array_t* a, size_t need) {
-    size_t newcap; void* newptr;
-    if (a->count + need <= a->capacity) return WSE_OK;
+WSM_ARRAY_RESERVE(wsi_instr, wsi_instrs_t, instrs)
+WSM_ARRAY_PUSH   (wsi_instr, wsi_instrs_t, instrs, wsi_instr_t)
 
-    newcap = a->capacity;
-    while (a->count + need > newcap)
-        newcap = (newcap * 207 + 127) / 128;
-
-    newptr = a->fn(a->instrs, newcap, a->ud);
-    if (!newptr) return WSE_NO_MEMORY;
-
-    a->instrs   = newptr;
-    a->capacity = newcap;
-    return WSE_OK;
-}
-
-static ws_error_t wsi_instr_push(wsi_array_t* a, wse_instr_t instr) {
-    if (wsi_instr_reserve(a, 1)) return WSE_NO_MEMORY;
-    a->instrs[a->count++] = instr;
-    return WSE_OK;
-}
-
-static ws_error_t wsi_instr_push_data(wsi_array_t* a, void* data, size_t size) {
-    if (wsi_instr_reserve(a, size)) return WSE_NO_MEMORY;
-    memcpy(a->instrs + a->count, data, size); a->count += size;
+static ws_error_t wsi_instr_push_data(wsi_instrs_t* array, void* data, size_t size) {
+    if (wsi_instr_reserve(array, size)) return WSE_NO_MEMORY;
+    memcpy(array->instrs + array->count, data, size); array->count += size;
     return WSE_OK;
 }
 
@@ -84,7 +62,7 @@ static ws_error_t wsi_parse_integer(wsi_read_buffer_t* rb, ws_int_t* out) {
     return WSE_OK;
 }
 
-static ws_error_t wsi_parse_stk_manip(wsi_array_t* a, wsi_read_buffer_t* rb) {
+static ws_error_t wsi_parse_stk_manip(wsi_instrs_t* a, wsi_read_buffer_t* rb) {
     ws_int_t arg; ws_error_t ec;
 
     switch (wsi_rb_get(rb)) {
@@ -136,7 +114,7 @@ static ws_error_t wsi_parse_stk_manip(wsi_array_t* a, wsi_read_buffer_t* rb) {
     return WSE_OK;
 }
 
-static ws_error_t wsi_parse_arith(wsi_array_t* a, wsi_read_buffer_t* rb) {
+static ws_error_t wsi_parse_arith(wsi_instrs_t* a, wsi_read_buffer_t* rb) {
     ws_error_t ec;
 
     switch (wsi_rb_get(rb)) {
@@ -173,7 +151,7 @@ static ws_error_t wsi_parse_arith(wsi_array_t* a, wsi_read_buffer_t* rb) {
     return WSE_OK;
 }
 
-static ws_error_t wsi_parse_heap_acs(wsi_array_t* a, wsi_read_buffer_t* rb) {
+static ws_error_t wsi_parse_heap_acs(wsi_instrs_t* a, wsi_read_buffer_t* rb) {
     ws_error_t ec;
 
     switch (wsi_rb_get(rb)) {
@@ -191,7 +169,7 @@ static ws_error_t wsi_parse_heap_acs(wsi_array_t* a, wsi_read_buffer_t* rb) {
     return WSE_OK;
 }
 
-static ws_error_t wsi_parse_io(wsi_array_t* a, wsi_read_buffer_t* rb) {
+static ws_error_t wsi_parse_io(wsi_instrs_t* a, wsi_read_buffer_t* rb) {
     ws_error_t ec;
 
     switch (wsi_rb_get(rb)) {
@@ -251,7 +229,7 @@ static ws_error_t wsi_parse_label(wsi_read_buffer_t* rb, wsi_label_t* lbl) {
 }
 
 static ws_error_t wsi_parse_flow_ctrl(
-    wsi_array_t* a, wsl_list_t* ll, wsi_read_buffer_t* rb
+    wsi_instrs_t* a, wsl_list_t* ll, wsi_read_buffer_t* rb
 ) {
     ws_error_t ec; wsi_label_t label; wsl_index_t index;
 
@@ -330,31 +308,26 @@ ws_error_t ws_compile(
     ws_alloc_t alloc, void* udata
 ) {
     wsi_read_buffer_t rdbuf[1] = {0};
-    wsi_array_t arr[1] = {0};
-    wsl_list_t  lst[1] = {0};
+    wsi_instrs_t arr[1] = {0};
+    wsl_list_t   lst[1] = {0};
 
     ws_code_t* code;
     ws_error_t ec;
     size_t i;
 
     if (!cptr || !rdr || !alloc) return WSE_INVAL_ARG;
-    rdbuf->fn = rdr;
-    rdbuf->ud = src;
 
-    *cptr = NULL;
-    code = alloc(NULL, sizeof *code, udata);
+    *cptr = NULL; code = alloc(NULL, sizeof *code, udata);
     if (!code) return WSE_NO_MEMORY;
+
     memset(code, 0, sizeof *code);
     code->alloc = arr->fn = lst->fn = alloc;
     code->udata = arr->ud = lst->ud = udata;
+    rdbuf->fn = rdr;
+    rdbuf->ud = src;
 
-    arr->instrs = arr->fn(NULL,
-        (arr->capacity = WSC_INIT_INSTR_CAP), arr->ud);
-    if (!arr->instrs) WSM_THROW(WSE_NO_MEMORY);
-
-    lst->labels = lst->fn(NULL, sizeof *lst->labels *
-        (lst->capacity = WSC_INIT_LABEL_CAP), lst->ud);
-    if (!lst->labels) WSM_THROW(WSE_NO_MEMORY);
+    WSM_ARRAY_INIT(arr, instrs, WSC_INIT_INSTR_CAP, WSM_THROW(WSE_NO_MEMORY));
+    WSM_ARRAY_INIT(lst, labels, WSC_INIT_LABEL_CAP, WSM_THROW(WSE_NO_MEMORY));
 
     while (1) {
         switch (wsi_rb_get(rdbuf)) {
@@ -411,13 +384,11 @@ loop_exit:
         }
     }
 
-    code->instrs = alloc(arr->instrs, arr->count, udata);
-    if (arr->count && !code->instrs) WSM_THROW(WSE_NO_SHRINK);
-    code->icnt = arr->count;
+    WSM_ARRAY_SHRINK(arr, instrs, WSM_THROW(WSE_NO_SHRINK));
+    WSM_ARRAY_SHRINK(lst, labels, WSM_THROW(WSE_NO_SHRINK));
 
-    code->labels = alloc(lst->labels, lst->count * sizeof *lst->labels, udata);
-    if (lst->count && !code->labels) WSM_THROW(WSE_NO_SHRINK);
-    code->lcnt = lst->count;
+    code->instrs = arr->instrs; code->icnt = arr->count;
+    code->labels = lst->labels; code->lcnt = lst->count;
 
     *cptr = code;
     return WSE_OK;
