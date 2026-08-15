@@ -1,13 +1,11 @@
-#include "defines.h"
-
 #include <stdio.h>
 
 static void process(FILE* src, FILE* dst) {
     int ch; while ((ch = fgetc(src)) != EOF)
         switch (ch) {
-            case 'S': fputc(WSC_S_CHAR, dst); break;
-            case 'T': fputc(WSC_T_CHAR, dst); break;
-            case 'L': fputc(WSC_L_CHAR, dst); break;
+            case 'S': fputc('\x20', dst); break;
+            case 'T': fputc('\x09', dst); break;
+            case 'L': fputc('\x0A', dst); break;
 
             case ';':
                 do ch = fgetc(src); while (ch != '\n' && ch != EOF);

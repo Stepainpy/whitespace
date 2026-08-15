@@ -4,21 +4,6 @@
 #include <whitespace/whitespace.h>
 #include "label.h"
 
-/* Constants and types */
-
-#define WSC_S_CHAR '\x20'
-#define WSC_T_CHAR '\x09'
-#define WSC_L_CHAR '\x0A'
-
-typedef enum {
-    WSA_EOF = 0,
-    WSA_SPACE,
-    WSA_TAB,
-    WSA_LF
-} wsa_char_t;
-
-typedef int ws_int_t;
-
 /* Instructions
  * indicator (-o, +p, r) mean:
  *   -o is how many pops from stack
@@ -62,8 +47,6 @@ typedef enum {
 
     WSI_UNKNOWN /* Placeholder for last comma */
 } wse_instr_t;
-
-/* Definition of state */
 
 typedef unsigned char wsi_instr_t;
 

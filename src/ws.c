@@ -1,5 +1,4 @@
 #include <whitespace/whitespace.h>
-#include "defines.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,9 +27,9 @@ static size_t ws_read(void* buf, size_t size, size_t count, void* file) {
     size_t out = fread(buf, size, count, file), i;
     for (i = 0; i < out; i += size) {
         unsigned char* ptr = (unsigned char*)buf + i;
-        /**/ if ((wsb_tl_lower && *ptr == 's') || (wsb_tl_upper && *ptr == 'S')) *ptr = WSC_S_CHAR;
-        else if ((wsb_tl_lower && *ptr == 't') || (wsb_tl_upper && *ptr == 'T')) *ptr = WSC_T_CHAR;
-        else if ((wsb_tl_lower && *ptr == 'l') || (wsb_tl_upper && *ptr == 'L')) *ptr = WSC_L_CHAR;
+        /**/ if ((wsb_tl_lower && *ptr == 's') || (wsb_tl_upper && *ptr == 'S')) *ptr = '\x20';
+        else if ((wsb_tl_lower && *ptr == 't') || (wsb_tl_upper && *ptr == 'T')) *ptr = '\x09';
+        else if ((wsb_tl_lower && *ptr == 'l') || (wsb_tl_upper && *ptr == 'L')) *ptr = '\x0A';
         else *ptr = '\0';
     }
     return out;

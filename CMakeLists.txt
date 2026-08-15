@@ -86,9 +86,10 @@ set(LIB_HDR
     include/whitespace/whitespace.h
 )
 set(LIB_SRC
-    src/defines.h
+    src/code.h
     src/array.h
     src/label.h
+    src/parse.h
 
     src/compile.c
     src/execute.c
@@ -97,6 +98,7 @@ set(LIB_SRC
     src/other.c
 
     src/label.c
+    src/parse.c
 )
 
 target_sources(${WS_LIB} PRIVATE ${LIB_SRC})
