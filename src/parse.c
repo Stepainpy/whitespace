@@ -107,8 +107,11 @@ static ws_error_t wsp_stk_manip(wsi_read_buffer_t* rb, wsi_instrs_t* a) {
                 case WSA_SPACE:
                     if ((ec = wsp_integer(rb, &arg))) return ec;
                     if (arg < 0) return WSE_INVAL_PARAM;
-                    if ((ec = wsi_instr_push(a, WSI_COPY))) return ec;
-                    if ((ec = wsi_instr_push_data(a, &arg, sizeof arg))) return ec;
+                    if (arg > 0) {
+                        if ((ec = wsi_instr_push(a, WSI_COPY))) return ec;
+                        if ((ec = wsi_instr_push_data(a, &arg, sizeof arg))) return ec;
+                    } else
+                        if ((ec = wsi_instr_push(a, WSI_DUP))) return ec;
                     break;
 
                 case WSA_LF:
