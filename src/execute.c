@@ -1,4 +1,5 @@
 #include "code.h"
+#include "array.h"
 
 #include <string.h>
 
@@ -10,67 +11,22 @@
 
 #define WSC_HEAP_PAGE_SIZE 64
 
-#define WSS_STRUCT(type) \
-    struct { type* values; size_t count, capacity; ws_alloc_t fn; void* ud; }
-
-#define WSS_RESERVE(sname, stype) \
-static ws_error_t wss_##sname##_reserve(stype* s, size_t need) {  \
-    size_t newcap; void* newptr;                                  \
-    if (s->count + need <= s->capacity) return WSE_OK;            \
-                                                                  \
-    newcap = s->capacity;                                         \
-    while (s->count + need > newcap)                              \
-        newcap = (newcap * 207 + 127) / 128;                      \
-                                                                  \
-    newptr = s->fn(s->values, sizeof *s->values * newcap, s->ud); \
-    if (!newptr) return WSE_NO_MEMORY;                            \
-                                                                  \
-    s->values   = newptr;                                         \
-    s->capacity = newcap;                                         \
-    return WSE_OK;                                                \
-}                                                                 \
-
-#define WSS_PUSH(sname, stype, type) \
-static ws_error_t wss_##sname##_push(stype* s, type value) { \
-    if (wss_##sname##_reserve(s, 1)) return WSE_NO_MEMORY;   \
-    s->values[s->count++] = value;                           \
-    return WSE_OK;                                           \
-}                                                            \
-
-typedef WSS_STRUCT(ws_int_t) wss_data_t;
-WSS_RESERVE(data, wss_data_t)
-WSS_PUSH   (data, wss_data_t, ws_int_t)
-
-typedef WSS_STRUCT(size_t) wss_call_t;
-WSS_RESERVE(call, wss_call_t)
-WSS_PUSH   (call, wss_call_t, size_t)
-
 typedef struct {
     size_t base;
     ws_int_t data[WSC_HEAP_PAGE_SIZE];
 } wsh_page_t;
 
-typedef struct {
-    wsh_page_t* pages;
-    size_t count, capacity;
-    ws_alloc_t fn; void* ud;
-} wsi_heap_t;
+typedef WSM_ARRAY_STRUCT(  ws_int_t, values) wss_data_t;
+typedef WSM_ARRAY_STRUCT(    size_t, values) wss_call_t;
+typedef WSM_ARRAY_STRUCT(wsh_page_t,  pages) wsi_heap_t;
 
-static ws_error_t wsh_reserve(wsi_heap_t* h) {
-    size_t newcap; void* newptr;
-    if (h->count + 1 <= h->capacity) return WSE_OK;
+WSM_ARRAY_RESERVE(wss_data, wss_data_t, values)
+WSM_ARRAY_PUSH   (wss_data, wss_data_t, values, ws_int_t)
 
-    newcap = h->capacity;
-    while (h->count + 1 > newcap)
-        newcap = (newcap * 207 + 127) / 128;
+WSM_ARRAY_RESERVE(wss_call, wss_call_t, values)
+WSM_ARRAY_PUSH   (wss_call, wss_call_t, values, size_t)
 
-    newptr = h->fn(h->pages, sizeof *h->pages * newcap, h->ud);
-    if (!newptr) return WSE_NO_MEMORY;
-
-    h->pages    = newptr;
-    h->capacity = newcap;
-    return WSE_OK;
-}
+WSM_ARRAY_RESERVE(wsh, wsi_heap_t, pages)
 
 static ws_int_t* wsh_get(wsi_heap_t* h, size_t address) {
     wsh_page_t* page; size_t i;
@@ -81,7 +37,7 @@ static ws_int_t* wsh_get(wsi_heap_t* h, size_t address) {
             goto get_address;
     }
 
-    if (wsh_reserve(h)) return NULL;
+    if (wsh_reserve(h, 1)) return NULL;
     page = h->pages + h->count++;
     page->base = address - address % WSC_HEAP_PAGE_SIZE;
 
@@ -182,6 +138,7 @@ ws_error_t ws_execute(ws_code_t* c,
     wss_data_t dstk[1] = {0};
     wss_call_t cstk[1] = {0};
     wsi_heap_t heap[1] = {0};
+
     wsl_index_t lbl_idx;
     ws_int_t a, b, *ptr;
     ws_int_t arg, idx;
@@ -193,17 +150,9 @@ ws_error_t ws_execute(ws_code_t* c,
     dstk->fn = cstk->fn = heap->fn = c->alloc;
     dstk->ud = cstk->ud = heap->ud = c->udata;
 
-    dstk->values = dstk->fn(NULL, sizeof *dstk->values *
-        (dstk->capacity = WSC_INIT_DATA_CAP), dstk->ud);
-    if (!dstk->values) WSM_THROW(WSE_NO_MEMORY);
-
-    cstk->values = cstk->fn(NULL, sizeof *cstk->values *
-        (cstk->capacity = WSC_INIT_CALL_CAP), cstk->ud);
-    if (!cstk->values) WSM_THROW(WSE_NO_MEMORY);
-
-    heap-> pages = heap->fn(NULL, sizeof *heap-> pages *
-        (heap->capacity = WSC_INIT_PAGE_CAP), heap->ud);
-    if (!heap-> pages) WSM_THROW(WSE_NO_MEMORY);
+    WSM_ARRAY_INIT(dstk, values, WSC_INIT_DATA_CAP, WSM_THROW(WSE_NO_MEMORY));
+    WSM_ARRAY_INIT(cstk, values, WSC_INIT_CALL_CAP, WSM_THROW(WSE_NO_MEMORY));
+    WSM_ARRAY_INIT(heap,  pages, WSC_INIT_PAGE_CAP, WSM_THROW(WSE_NO_MEMORY));
 
     for (i = 0; i < c->icnt; i++)
         switch (c->instrs[i]) {
