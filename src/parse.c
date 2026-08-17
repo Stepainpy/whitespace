@@ -60,14 +60,14 @@ static ws_error_t wsp_label(wsi_read_buffer_t* rb, wsi_label_t* lbl) {
     /**/ if (ch == WSA_LF ) return WSE_INVAL_LABEL;
     else if (ch == WSA_EOF) return WSE_INCOMPL_LABEL;
 
-    memset(lbl->parts, 0, WSL_PARTS_BYTE);
+    memset(lbl, 0, sizeof *lbl);
 
     do {
         wsl_part_t bit = ch == WSA_TAB;
         lbl->parts[i / WSL_PART_BITS] |= bit << (i % WSL_PART_BITS);
         ch = wsi_rb_get(rb);
         if (WSA_EOF) return WSE_INCOMPL_LABEL;
-    } while (++i < WSL_BITS && ch != WSA_LF);
+    } while (++i < WSC_MAX_LABEL_LENGTH && ch != WSA_LF);
     if (ch == WSA_EOF) return WSE_INCOMPL_LABEL;
     if (ch != WSA_LF ) return WSE_TOO_LONG_LABEL;
 

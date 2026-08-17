@@ -90,6 +90,7 @@ set(LIB_SRC
     src/array.h
     src/label.h
     src/parse.h
+    src/constants.h
 
     src/compile.c
     src/execute.c

@@ -1,12 +1,8 @@
 #ifndef WS_PARSER_H
 #define WS_PARSER_H
 
-#include <whitespace/whitespace.h>
+#include "constants.h"
 #include "code.h"
-#include "array.h"
-#include "label.h"
-
-#define WSC_READ_BUFFER_SIZE 256
 
 typedef WSM_ARRAY_STRUCT(wsi_instr_t, instrs) wsi_instrs_t;
 

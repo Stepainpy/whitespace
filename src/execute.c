@@ -1,15 +1,7 @@
+#include "constants.h"
 #include "code.h"
-#include "array.h"
 
 #include <string.h>
-
-#define EOF (-1)
-
-#define WSC_INIT_DATA_CAP 16
-#define WSC_INIT_CALL_CAP 16
-#define WSC_INIT_PAGE_CAP 1
-
-#define WSC_HEAP_PAGE_SIZE 64
 
 typedef struct {
     size_t base;
@@ -111,7 +103,7 @@ static ws_error_t wsi_get_utf8(void* in, ws_rdfn_t rdr, ws_int_t* chr) {
 }
 
 static ws_error_t wsi_get_int(void* in, ws_rdfn_t rdr, ws_int_t* Int) {
-#define GETC() (rdr(&chr, 1, 1, in) ? chr : (chr = EOF))
+#define GETC() (rdr(&chr, 1, 1, in) ? chr : (chr = -1))
     int chr = 0; int neg = 0; *Int = 0;
 
     do GETC(); while (chr == ' ' || chr == '\t' || chr == '\n');

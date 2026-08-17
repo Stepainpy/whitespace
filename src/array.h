@@ -1,6 +1,8 @@
 #ifndef WS_TEMPLATE_ARRAY_H
 #define WS_TEMPLATE_ARRAY_H
 
+#include <whitespace/whitespace.h>
+
 #define WSM_ARRAY_STRUCT(value_type, value_field) \
     struct { value_type* value_field; size_t count, capacity; ws_alloc_t fn; void* ud; }
 

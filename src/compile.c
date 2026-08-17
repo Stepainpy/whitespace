@@ -1,10 +1,7 @@
-#include "code.h"
+#include "constants.h"
 #include "parse.h"
 
 #include <string.h>
-
-#define WSC_INIT_INSTR_CAP 16
-#define WSC_INIT_LABEL_CAP 16
 
 #define WSM_THROW(err_code) \
     do { ec = err_code; goto error; } while (0)

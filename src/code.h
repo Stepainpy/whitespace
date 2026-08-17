@@ -1,7 +1,6 @@
 #ifndef WS_DEFINES_H
 #define WS_DEFINES_H
 
-#include <whitespace/whitespace.h>
 #include "label.h"
 
 /* Instructions

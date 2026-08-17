@@ -1,21 +1,21 @@
 #ifndef WS_LABEL_H
 #define WS_LABEL_H
 
-#include <whitespace/whitespace.h>
+#include "constants.h"
 #include "array.h"
 
-#define WSL_BITS 256
-#define WSL_BYTE ((WSL_BITS + 7) / 8)
+#include <limits.h>
 
-#define WSL_PART_BITS (WSL_PART_BYTE * 8)
-#define WSL_PART_BYTE sizeof(wsl_part_t)
+#define WSM_CEIL(a, b) (((a) + (b) - 1) / (b))
+
+#define WSL_BYTES WSM_CEIL(WSC_MAX_LABEL_LENGTH, CHAR_BIT)
+#define WSL_PARTS WSM_CEIL(WSL_BYTES, sizeof(wsl_part_t))
+
+#define WSL_MAX_LABEL_COUNT ((size_t)1 << (sizeof(wsl_index_t) * CHAR_BIT))
+
+#define WSL_PART_BITS (sizeof(wsl_part_t) * CHAR_BIT)
 
 #define WSL_INVAL_PLACE (~(size_t)0)
-#define WSL_PARTS ((WSL_BYTE + WSL_PART_BYTE - 1) / WSL_PART_BYTE)
-
-#define WSL_PARTS_BYTE (WSL_PART_BYTE * WSL_PARTS)
-
-#define WSL_MAX_LABEL_COUNT ((size_t)1 << (sizeof(wsl_index_t) * 8))
 
 typedef unsigned short wsl_index_t;
 typedef unsigned long wsl_part_t;
