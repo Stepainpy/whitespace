@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
-project(whitespace LANGUAGES C)
+project(whitespace
+    VERSION      1.0.0
+    DESCRIPTION "Whitespace v0.3 virtual machine"
+    HOMEPAGE_URL https://github.com/Stepainpy/whitespace
+    LANGUAGES    C
+)
 
 ## External settings
 
@@ -36,8 +41,7 @@ if(MSVC)
         list(APPEND FLAGS /O2)
     endif()
 else()
-    # For the future
-    # list(APPEND FLAGS -Wno-long-long)
+    list(APPEND FLAGS -Wno-long-long)
     list(APPEND FLAGS -Wswitch-enum)
 endif()
 

@@ -9,7 +9,7 @@ extern "C" {
 
 /* Types */
 
-typedef int ws_int_t;
+typedef long long ws_int_t;
 
 typedef struct ws_code_t ws_code_t;
 
