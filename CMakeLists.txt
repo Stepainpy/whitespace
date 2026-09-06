@@ -109,16 +109,15 @@ set(LIB_SRC
 target_sources(${WS_LIB} PRIVATE ${LIB_SRC})
 set_target_properties(${WS_LIB} PROPERTIES PUBLIC_HEADER "${LIB_HDR}")
 
-## Create program
+if(PROJECT_IS_TOP_LEVEL)
+    ## Create program
+    target_sources(${WS_EXE} PRIVATE src/ws.c)
+    target_link_libraries(${WS_EXE} PRIVATE ${WS_LIB})
 
-target_sources(${WS_EXE} PRIVATE src/ws.c)
-target_link_libraries(${WS_EXE} PRIVATE ${WS_LIB})
+    ## Create translator
+    target_sources(${WS_TRL} PRIVATE src/wstl.c)
 
-## Create translator
-
-target_sources(${WS_TRL} PRIVATE src/wstl.c)
-
-## Create disassembler
-
-target_sources(${WS_DIS} PRIVATE src/wsda.c)
-target_link_libraries(${WS_DIS} PRIVATE ${WS_LIB})
+    ## Create disassembler
+    target_sources(${WS_DIS} PRIVATE src/wsda.c)
+    target_link_libraries(${WS_DIS} PRIVATE ${WS_LIB})
+endif()
